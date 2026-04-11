@@ -29,11 +29,19 @@ If a player can't move any of their pieces, they pass their turn and the opponen
 
 ## Analysis
 1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.
-2. Comment d éterminer si une configuration correspond à une fin de partie ?
+
+
+2. Comment déterminer si une configuration correspond à une fin de partie ?  
+Il suffit de vérifier si l'un des joueurs a capturé la licorne de l'autre joueur. On peut faire ça en vérifiant si la position de la licorne d'un joueur correspond à la position d'un paladin de l'autre joueur. Si c'est le cas, alors le joueur qui a capturé la licorne (celui de la couleur du paladin) a gagné la partie.
+
 3. Essayez d’identifier les paramètres source de difficulté dans ce jeu. Quel est le facteur de branchement maximal de ce jeu pour chaque action ?
+
 4. Existe-t-il dans ce jeu des coups imparables, permettant la victoire à coup sûr d’un des joueurs ?
+
 5. Quels sont les critères que vous envisagez de prendre en compte pour concevoir des heuristiques d’estimation de configuration de jeu (donner au moins 3 critères) ?
+
 6. Est-il souhaitable pour ce jeu d’adopter une stratégie particulière en début, milieu ou fin de partie ?
+
 7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d’une partie
 
 
