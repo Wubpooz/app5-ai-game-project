@@ -104,7 +104,7 @@ Exemples de critères heuristiques:
 Une heuristique pourrait donc être: 
 $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
 
-Where $P$ is the set of our paladins, $d_p$ is the distance of paladin $p$ to the opponent's unicorn, $\mathcal{S_l}$ is a security score for our unicorn, $\text{moves}(e)$ is the number of legal moves for an enemy piece $e$ that threatens our unicorn, $\mathcal{BC}$ is a control score for favorable bands, and $\mathcal{T}$ is a pressure score for forcing passes.  
+Where $P$ is the set of our paladins, $d_p$ is the distance of paladin $p$ to the opponent's unicorn, $\mathcal{S_l}$ is a security score for our unicorn, $\text{moves}(e)$ is the number of legal moves for an enemy piece $e$ that threatens our unicorn, $\mathcal{BC}$ is a control score for favorable bands, and $\mathcal{T}$ is a pressure score for forcing passes. On pourra considérer la distance de Manhattan car les mouvements sont en ligne droite sans diagonales, mais la contrainte de bande rend la distance "réelle en nombre de coups" non triviale => distinguer distance physique et distance en nombre de demi-coups sous contrainte ?  
 
 
 &nbsp;  
