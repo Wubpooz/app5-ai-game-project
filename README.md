@@ -142,3 +142,5 @@ Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - [Escampe Game Rules](http://jeuxstrategieter.free.fr/Escampe_complet.php)
 - [Mana (2nd version de Escampe)](https://fr.wikipedia.org/wiki/Mana_(jeu))
 - [Mana Rules](https://regle.escaleajeux.fr/mana__rg.pdf)
+- [TODO](https://youtube.com/watch?v=KaljD3Q3ct0)
+- [TODO](https://youtube.com/watch?v=geHcAS1fFg8)
