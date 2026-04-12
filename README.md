@@ -79,7 +79,7 @@ Facteur de branchement maximal :
 
 Alors, dans le pire des cas (cas de branchement maximal), un joueur peut faire bouger ses 6 pièces de 3 cases, dans 4, puis 3, puis 3 directions : 
 
-$`b_{max} = 6 \times 4 + 6 \times 2 \times 3 = 60`$ coups légaux par tour.
+$b_{max} = 6 \times 4 + 6 \times 2 \times 3 = 60$ coups légaux par tour.
 
 En pratique, ce facteur est plus faible (bords du plateau, blocages, contrainte de bande).
 
@@ -103,8 +103,7 @@ Exemples de critères heuristiques:
 - Pression de passe: probabilité de forcer l'adversaire à passer ou à ne pouvoir jouer que peu de coups.
 
 Une heuristique pourait donc être: 
-
-$`\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}`$
+$\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
 
 Where $P$ is the set of our paladins, $d_p$ is the distance of paladin $p$ to the opponent's unicorn, $\mathcal{S_l}$ is a security score for our unicorn, $\text{moves}(e)$ is the number of legal moves for an enemy piece $e$ that threatens our unicorn, $\mathcal{BC}$ is a control score for favorable bands, and $\mathcal{T}$ is a pressure score for forcing passes.  
 
@@ -134,22 +133,22 @@ Fin de partie:
 
 ### 7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.
 
-On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant MAJ le nombre de game states possibles.
+On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant $\mathcal{m}$ le nombre de game states possibles.
 
-L'idée étant que si dans une partie on atteint le MAJ-ième coup, c'est qu'on a atteint tous les game states possibles, et donc qu'on en répète forcément un, et à partir de ce point là on continue à les répéter.
+L'idée étant que si dans une partie on atteint le $\mathcal{m}$-ième coup, c'est qu'on a atteint tous les game states possibles, et donc qu'on en répète forcément un, et à partir de ce point là on continue à les répéter.
 
 Un game state est caractérisé par plusieurs variables:
 - Les positions des 12 pièces parmi les 36 cases (1 licorne blanche, 1 licorne noire, 5 paladins blancs, 5 paladins noirs);
 - Le dernier coup de l'adversaire (4 possibilités : a terminé sur une case à 1, 2, ou 3 bandes, ou n'a pas joué).
 
-On estime alors le majorant MAJ :
+On estime alors le majorant $\mathcal{m}$ :
 
-$`MAJ = \begin{pmatrix}36\\1\end{pmatrix} \times \begin{pmatrix}35\\5\end{pmatrix} \times \begin{pmatrix}30\\1\end{pmatrix} \times \begin{pmatrix}29\\5\end{pmatrix} \times 4 
-= \frac{36!}{(5!)^2 (36-12)!} \times 4 = 1.665432281 \times 10^{14}`$
+$\mathcal{m} = \begin{pmatrix}36\\1\end{pmatrix} \times \begin{pmatrix}35\\5\end{pmatrix} \times \begin{pmatrix}30\\1\end{pmatrix} \times \begin{pmatrix}29\\5\end{pmatrix} \times 4 
+= \frac{36!}{(5!)^2 (36-12)!} \times 4 = 1.665432281 \times 10^{14}$
 
 Comme les deux joueurs ont la même stratégie, on peut envisager de diviser ce majorant par 2 pour éliminer les game states "miroirs" (même game state mais en inversant les couleurs des pièces). En principe, si en partant d'un game state G, après X coups on se retrouve dans son game state miroir G', on peut supposer qu'après X coups on revient dans le game state G. On a alors :
 
-$`MAJ = \frac{36!}{(5!)^2 (36-12)!} \times 2 = 8.327161403 \times 10^{13}`$
+$\mathcal{m} = \frac{36!}{(5!)^2 (36-12)!} \times 2 = 8.327161403 \times 10^{13}$
 
 Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - Minimax avec alpha-beta pour réduire l'exploration de l'arbre de jeu
