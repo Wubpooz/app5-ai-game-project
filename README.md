@@ -61,10 +61,10 @@ Pour éviter des solutions sous-optimales ou des boucles infinies, on peut aussi
 Sources principales de difficulté:  
 - Contrainte de bande: le coup adverse contraint les pièces jouables au tour suivant.  
 - Le placement initial libre crée une grande variabilité des positions de départ.  
-- Peu de captures (seule la licorne est capturable), donc longues séquences tactiques, cycles et pas de simplification rapide de la position.  
+- Une seule capture (celle de la licorne), donc longues séquences tactiques, cycles et pas de simplification rapide de la position.  
 - Importance du tempo: forcer un mouvement adverse ou pousser l'adversaire à passer.
 
-Facteur de branchement maximal (avec les règles de déplacement en ligne droite de longueur imposée):  
+Facteur de branchement maximal :  
 - Chaque joueur a 6 pièces.
 - Une pièce peut faire un mouvement un nombre de fois qui dépend du nombre de bandes sur sa case de départ.
 - Lors de son premier mouvement, une pièce peut se déplacer dans au plus 4 directions (haut, bas, gauche, droite)
