@@ -7,6 +7,13 @@
 - [Escampe AI](#escampe-ai)
   - [Game Rules](#game-rules)
   - [Analysis](#analysis)
+    - [1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.](#1-comment-modéliser-un-état-du-jeu-plateau-et-pièces-restantes--préciser-les-avantagesinconvénients-de-votre-représentation)
+    - [2. Comment déterminer si une configuration correspond à une fin de partie ?](#2-comment-déterminer-si-une-configuration-correspond-à-une-fin-de-partie-)
+    - [3. Essayez d'identifier les paramètres sources de difficulté dans ce jeu. Quel est le facteur de branchement maximal de ce jeu pour chaque action ?](#3-essayez-didentifier-les-paramètres-sources-de-difficulté-dans-ce-jeu-quel-est-le-facteur-de-branchement-maximal-de-ce-jeu-pour-chaque-action-)
+    - [4. Existe-t-il dans ce jeu des coups imparables, permettant la victoire à coup sûr d'un des joueurs ?](#4-existe-t-il-dans-ce-jeu-des-coups-imparables-permettant-la-victoire-à-coup-sûr-dun-des-joueurs-)
+    - [5. Quels sont les critères que vous envisagez de prendre en compte pour concevoir des heuristiques d'estimation de configuration de jeu (donner au moins 3 critères) ?](#5-quels-sont-les-critères-que-vous-envisagez-de-prendre-en-compte-pour-concevoir-des-heuristiques-destimation-de-configuration-de-jeu-donner-au-moins-3-critères-)
+    - [6. Est-il souhaitable pour ce jeu d'adopter une stratégie particulière en début, milieu ou fin de partie ?](#6-est-il-souhaitable-pour-ce-jeu-dadopter-une-stratégie-particulière-en-début-milieu-ou-fin-de-partie-)
+    - [7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.](#7-donnez-un-majorant-du-nombre-de-coups-dans-une-partie-détaillez-les-techniques-que-vous-comptez-mettre-en-oeuvre-pour-respecter-une-contrainte-de-temps-imposée-sur-la-durée-totale-dune-partie)
   - [References](#references)
 
 ---
@@ -162,5 +169,5 @@ Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - [Escampe Game Rules](http://jeuxstrategieter.free.fr/Escampe_complet.php)
 - [Mana (2nd version de Escampe)](https://fr.wikipedia.org/wiki/Mana_(jeu))
 - [Mana Rules](https://regle.escaleajeux.fr/mana__rg.pdf)
-- [TODO](https://youtube.com/watch?v=KaljD3Q3ct0)
-- [TODO](https://youtube.com/watch?v=geHcAS1fFg8)
+- [I Solved Connect 4 - 2swap](https://youtube.com/watch?v=KaljD3Q3ct0)
+- [I Improved the Strongest Chess AI | My Best Idea Yet - Daniel Monroe](https://youtube.com/watch?v=geHcAS1fFg8)
