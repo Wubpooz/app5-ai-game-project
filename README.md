@@ -30,7 +30,7 @@ If a player can't move any of their pieces, they pass their turn and the opponen
 ---  
 
 ## Analysis
-1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.  
+### 1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.  
 
 Une représentation efficace est de séparer les données statiques et dynamiques:  
 - Statique: une matrice 6x6 des bandes (1, 2, 3).  
@@ -48,7 +48,7 @@ Inconvénients:
 
 &nbsp;  
 
-2. Comment déterminer si une configuration correspond à une fin de partie ?  
+### 2. Comment déterminer si une configuration correspond à une fin de partie ?  
 Il suffit de vérifier si l'un des joueurs a capturé la licorne de l'autre joueur. On peut faire ça en vérifiant si la position de la licorne d'un joueur correspond à la position d'un paladin de l'autre joueur. Si c'est le cas, alors le joueur qui a capturé la licorne (celui de la couleur du paladin) a gagné la partie.
 
 Pour éviter des solutions sous-optimales ou des boucles infinies, on peut aussi ajouter des règles de fin de partie supplémentaires:  
@@ -57,7 +57,7 @@ Pour éviter des solutions sous-optimales ou des boucles infinies, on peut aussi
 
 &nbsp;  
 
-3. Essayez d'identifier les paramètres sources de difficulté dans ce jeu. Quel est le facteur de branchement maximal de ce jeu pour chaque action ?  
+### 3. Essayez d'identifier les paramètres sources de difficulté dans ce jeu. Quel est le facteur de branchement maximal de ce jeu pour chaque action ?  
 Sources principales de difficulté:  
 - Contrainte de bande: le coup adverse contraint les pièces jouables au tour suivant.  
 - Le placement initial libre crée une grande variabilité des positions de départ.  
@@ -70,13 +70,15 @@ Facteur de branchement maximal :
 - Lors de son premier mouvement, une pièce peut se déplacer dans au plus 4 directions (haut, bas, gauche, droite)
 - Lors de ses autres mouvements, une pièce peut se déplacer dans au plus 3 directions (car elle ne peut pas revenir sur ses pas).
 
-Alors, dans le pire des cas (cas de branchement maximal), un joueur peut faire bouger ses 6 pièces de 3 cases, dans 4, puis 3, puis 3 directions : `b_max = 6 * 4 + 6 * 2 * 3 = 60` coups légaux par tour.
+Alors, dans le pire des cas (cas de branchement maximal), un joueur peut faire bouger ses 6 pièces de 3 cases, dans 4, puis 3, puis 3 directions : 
+
+$`b_{max} = 6 \times 4 + 6 \times 2 \times 3 = 60`$ coups légaux par tour.
 
 En pratique, ce facteur est plus faible (bords du plateau, blocages, contrainte de bande).
 
 &nbsp;  
 
-4. Existe-t-il dans ce jeu des coups imparables, permettant la victoire à coup sûr d'un des joueurs ?  
+### 4. Existe-t-il dans ce jeu des coups imparables, permettant la victoire à coup sûr d'un des joueurs ?  
 Localement, il peut exister des séquences forcantes:  
 - Un joueur peut menacer la licorne adverse et imposer une bande qui limite fortement les réponses.  
 - Si l'adversaire ne peut ni déplacer sa licorne vers une case sûre, ni casser la ligne de capture au coup suivant, la victoire devient forcée.
@@ -85,7 +87,7 @@ En revanche, il n'y a pas de raison de supposer un coup gagnant universel depuis
 
 &nbsp;  
 
-5. Quels sont les critères que vous envisagez de prendre en compte pour concevoir des heuristiques d'estimation de configuration de jeu (donner au moins 3 critères) ?
+### 5. Quels sont les critères que vous envisagez de prendre en compte pour concevoir des heuristiques d'estimation de configuration de jeu (donner au moins 3 critères) ?
 Exemples de critères heuristiques:
 - Distance d'attaque: distance minimale ou moyenne de nos paladins vers la licorne adverse.
 - Sécurité de la licorne: nombre de cases d'évasion et niveau de menace adverse en 1-2 coups.
@@ -93,13 +95,16 @@ Exemples de critères heuristiques:
 - Contrôle des bandes: capacité à terminer sur une bande qui réduit les choix adverses.
 - Pression de passe: probabilité de forcer l'adversaire à passer ou à ne pouvoir jouer que peu de coups.
 
-Une heuristique pourait donc être: $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$. 
+Une heuristique pourait donc être: 
+
+$`\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}`$
+
 Where $P$ is the set of our paladins, $d_p$ is the distance of paladin $p$ to the opponent's unicorn, $\mathcal{S_l}$ is a security score for our unicorn, $\text{moves}(e)$ is the number of legal moves for an enemy piece $e$ that threatens our unicorn, $\mathcal{BC}$ is a control score for favorable bands, and $\mathcal{T}$ is a pressure score for forcing passes.  
 
 
 &nbsp;  
 
-6. Est-il souhaitable pour ce jeu d'adopter une stratégie particulière en début, milieu ou fin de partie ?
+### 6. Est-il souhaitable pour ce jeu d'adopter une stratégie particulière en début, milieu ou fin de partie ?
 Oui, une stratégie par phase est pertinente.
 
 Début de partie:
@@ -120,14 +125,9 @@ Fin de partie:
 &nbsp;  
 
 
-7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.
+### 7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.
 
-Sans règle anti-répétition, une partie peut théoriquement boucler, donc il n'y a pas de majorant fini strict du nombre de coups.
-
-Si on ajoute un nul par répétition, un majorant théorique est le nombre d'états distincts. Celui-ci peut être estimé avec le nombre de configurations de pièces (10 pièces sur 36 cases) et les contraintes de bande:
-On a donc un majorant de $\displaystyle{M = ??????}$.
-
-On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant le nombre de game states possibles.
+On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant MAJ le nombre de game states possibles.
 
 L'idée étant que si dans une partie on atteint le MAJ-ième coup, c'est qu'on a atteint tous les game states possibles, et donc qu'on en répète forcément un, et à partir de ce point là on continue à les répéter.
 
@@ -135,10 +135,14 @@ Un game state est caractérisé par plusieurs variables:
 - Les positions des 12 pièces parmi les 36 cases (1 licorne blanche, 1 licorne noire, 5 paladins blancs, 5 paladins noirs);
 - Le dernier coup de l'adversaire (4 possibilités : a terminé sur une case à 1, 2, ou 3 bandes, ou n'a pas joué).
 
-On estime alors le majorant MAJ = $`\begin{pmatrix}36\\1\end{pmatrix} \times \begin{pmatrix}35\\5\end{pmatrix} \times \begin{pmatrix}30\\1\end{pmatrix} \times \begin{pmatrix}29\\5\end{pmatrix} \times 4 
+On estime alors le majorant MAJ :
+
+$`MAJ = \begin{pmatrix}36\\1\end{pmatrix} \times \begin{pmatrix}35\\5\end{pmatrix} \times \begin{pmatrix}30\\1\end{pmatrix} \times \begin{pmatrix}29\\5\end{pmatrix} \times 4 
 = \frac{36!}{(5!)^2 (36-12)!} \times 4 = 1.665432281 \times 10^{14}`$
 
-Comme les deux joueurs ont la même stratégie, on peut envisager de diviser ce majorant par 2 pour éliminer les game states "miroirs" (même game state mais en inversant les couleurs des pièces): MAJ_b = $`\frac{36!}{(5!)^2 (36-12)!} \times 2 = 8.327161403 \times 10^{13}`$
+Comme les deux joueurs ont la même stratégie, on peut envisager de diviser ce majorant par 2 pour éliminer les game states "miroirs" (même game state mais en inversant les couleurs des pièces). En principe, si en partant d'un game state G, après X coups on se retrouve dans son game state miroir G', on peut supposer qu'après X coups on revient dans le game state G. On a alors :
+
+$`MAJ = \frac{36!}{(5!)^2 (36-12)!} \times 2 = 8.327161403 \times 10^{13}`$
 
 Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - Minimax avec alpha-beta pour réduire l'exploration de l'arbre de jeu
