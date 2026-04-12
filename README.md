@@ -20,15 +20,15 @@
 
 &nbsp;  
 ## Game Rules
-This is a 2 player game. Each payer has 4 paladins and 1 unicorn either white or black.  
-The goals is to capture the opponent's unicorn by moving a paladin to its position.  
-The pieces are placed on a 6 by 6 grid. Each circle of the grid is either a simple, double or tripple banded circle.  
+This is a 2-player game. Each player has 4 paladins and 1 unicorn, either white or black.  
+The goal is to capture the opponent's unicorn by moving a paladin to its position.  
+The pieces are placed on a 6 by 6 grid. Each circle of the grid is either a simple, double, or triple-banded circle.  
 ![alt text](image.png)
 
-The game starts with the black player choosing a side (top or bottom) of the board and placing their pieces in the first two rows as he pleases. The white player places their and starts the game.
+The game starts with the black player choosing a side (top or bottom) of the board and placing their pieces in the first two rows as he pleases. The white player places their pieces and starts the game.
 
-Each turn, a player chooses one of their pieces from those who are sitting on the same band count as the number on the ending position of the piece of the last opponent's turn.  
-The pieces moves in straigh lines (like a rook in chess) of the number of circles corresponding to the band of the circle on which the piece is currently standing. No piece can "jump" over another one or pass twice by the same circle in a turn. The paladins can't be captured.    
+Each turn, a player chooses one of their pieces that is sitting on a band count equal to the number on the ending position of the opponent's previous turn.  
+The pieces move in straight lines (like a rook in chess) by a number of circles equal to the band of the circle on which the piece is currently standing. No piece can "jump" over another one or pass through the same circle twice in a turn. The paladins can't be captured.    
 If a player can't move any of their pieces, they pass their turn and the opponent can move any of their pieces on the next turn.  
 
 
@@ -38,7 +38,6 @@ If a player can't move any of their pieces, they pass their turn and the opponen
 
 ## Analysis
 ### 1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.  
-
 Une représentation efficace est de séparer les données statiques et dynamiques:  
 - Statique: une matrice 6x6 des bandes (1, 2, 3).  
 - Dynamique: positions des 10 pièces, joueur à jouer, bande imposée par le dernier coup adverse (ou "libre" après un passe), et éventuellement un compteur de répétitions.
@@ -102,7 +101,7 @@ Exemples de critères heuristiques:
 - Contrôle des bandes: capacité à terminer sur une bande qui réduit les choix adverses.
 - Pression de passe: probabilité de forcer l'adversaire à passer ou à ne pouvoir jouer que peu de coups.
 
-Une heuristique pourait donc être: 
+Une heuristique pourrait donc être: 
 $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
 
 Where $P$ is the set of our paladins, $d_p$ is the distance of paladin $p$ to the opponent's unicorn, $\mathcal{S_l}$ is a security score for our unicorn, $\text{moves}(e)$ is the number of legal moves for an enemy piece $e$ that threatens our unicorn, $\mathcal{BC}$ is a control score for favorable bands, and $\mathcal{T}$ is a pressure score for forcing passes.  
@@ -132,7 +131,6 @@ Fin de partie:
 
 
 ### 7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.
-
 On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant $\mathcal{m}$ le nombre de game states possibles.
 
 L'idée étant que si dans une partie on atteint le $\mathcal{m}$-ième coup, c'est qu'on a atteint tous les game states possibles, et donc qu'on en répète forcément un, et à partir de ce point là on continue à les répéter.
@@ -156,7 +154,7 @@ Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - Ordonnancement des coups pour explorer d'abord les coups les plus prometteurs (menaces, captures, coups qui imposent une bande favorable)
 - Table de transposition pour réutiliser les évaluations de positions déjà explorées ([Zobrist hashing](https://en.wikipedia.org/wiki/Zobrist_hashing))
 - Détection de répétitions pour éviter les boucles et les positions déjà vues
-- Extensions sélectives pour approfondir l'analyse sur les positions tactiques critiques (ex: menace immediate sur la licorne)
+- Extensions sélectives pour approfondir l'analyse sur les positions tactiques critiques (ex: menace immédiate sur la licorne)
 
 
 ---
