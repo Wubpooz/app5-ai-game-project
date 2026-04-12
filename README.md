@@ -65,9 +65,12 @@ Sources principales de difficulté:
 - Importance du tempo: forcer un mouvement adverse ou pousser l'adversaire à passer.
 
 Facteur de branchement maximal (avec les règles de déplacement en ligne droite de longueur imposée):  
-- Une pièce peut avoir au plus 4 destinations (haut, bas, gauche, droite), la distance étant fixée par le nombre de bandes.  
-- Un joueur peut avoir jusqu'à 5 pièces jouables.  
-Donc un majorant simple est `b_max = 5 x 4 = 20` coups légaux par tour.
+- Chaque joueur a 6 pièces.
+- Une pièce peut faire un mouvement un nombre de fois qui dépend du nombre de bandes sur sa case de départ.
+- Lors de son premier mouvement, une pièce peut se déplacer dans au plus 4 directions (haut, bas, gauche, droite)
+- Lors de ses autres mouvements, une pièce peut se déplacer dans au plus 3 directions (car elle ne peut pas revenir sur ses pas).
+
+Alors, dans le pire des cas (cas de branchement maximal), un joueur peut faire bouger ses 6 pièces de 3 cases, dans 4, puis 3, puis 3 directions : `b_max = 6 * 4 + 6 * 2 * 3 = 60` coups légaux par tour.
 
 En pratique, ce facteur est plus faible (bords du plateau, blocages, contrainte de bande).
 
@@ -123,6 +126,19 @@ Sans règle anti-répétition, une partie peut théoriquement boucler, donc il n
 
 Si on ajoute un nul par répétition, un majorant théorique est le nombre d'états distincts. Celui-ci peut être estimé avec le nombre de configurations de pièces (10 pièces sur 36 cases) et les contraintes de bande:
 On a donc un majorant de $\displaystyle{M = ??????}$.
+
+On suppose que les deux joueurs jouent de manière optimale, c'est-à-dire qu'ils jouent toujours le meilleur coup possible. Dans ce cas là, si en partant d'un game state, ils reviennent après X coups sur le même game state, on peut supposer que la partie boucle de manière infinie. On veut alors vérifier si on se trouve dans un game state qui a déjà été visité dans la partie, et pour cela on peut prendre comme majorant le nombre de game states possibles.
+
+L'idée étant que si dans une partie on atteint le MAJ-ième coup, c'est qu'on a atteint tous les game states possibles, et donc qu'on en répète forcément un, et à partir de ce point là on continue à les répéter.
+
+Un game state est caractérisé par plusieurs variables:
+- Les positions des 12 pièces parmi les 36 cases (1 licorne blanche, 1 licorne noire, 5 paladins blancs, 5 paladins noirs);
+- Le dernier coup de l'adversaire (4 possibilités : a terminé sur une case à 1, 2, ou 3 bandes, ou n'a pas joué).
+
+On estime alors le majorant MAJ = $`\begin{pmatrix}36\\1\end{pmatrix} \times \begin{pmatrix}35\\5\end{pmatrix} \times \begin{pmatrix}30\\1\end{pmatrix} \times \begin{pmatrix}29\\5\end{pmatrix} \times 4 
+= \frac{36!}{(5!)^2 (36-12)!} \times 4 = 1.665432281 \times 10^{14}`$
+
+Comme les deux joueurs ont la même stratégie, on peut envisager de diviser ce majorant par 2 pour éliminer les game states "miroirs" (même game state mais en inversant les couleurs des pièces): MAJ_b = $`\frac{36!}{(5!)^2 (36-12)!} \times 2 = 8.327161403 \times 10^{13}`$
 
 Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - Minimax avec alpha-beta pour réduire l'exploration de l'arbre de jeu
