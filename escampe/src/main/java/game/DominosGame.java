@@ -29,7 +29,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 			GameAlgorithm<DominosMove, DominosRole, DominosBoard> algH) {
 		this(players, board, algV, algH, false);
 	}
-	
+
 	public DominosGame(List<AIPlayer<DominosMove, DominosRole, DominosBoard>> players, DominosBoard board,
 			GameAlgorithm<DominosMove, DominosRole, DominosBoard> algV,
 			GameAlgorithm<DominosMove, DominosRole, DominosBoard> algH, boolean silent) {
@@ -47,11 +47,11 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 	public void runGame() {
 		// Call parent implementation
 		super.runGame();
-		
+
 		// Extract winner from game state - currentBoard is now populated
 		// This must be done in a method of DominosGame since currentBoard is protected in parent
 		captureWinner();
-		
+
 		// Display output only if not in silent mode
 		if (!silent) {
 			LOGGER.log(Level.INFO, "\nGame completed. Winner: {0}", this.winner);
@@ -102,7 +102,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 		LOGGER.info("\n╔════════════════════════════════════════════════════════╗");
 		LOGGER.info("║              ALGORITHM PERFORMANCE STATISTICS            ║");
 		LOGGER.info("╚════════════════════════════════════════════════════════╝");
-		
+
 		LOGGER.log(Level.INFO, "\nVERTICAL ({0}):", labelV);
 		LOGGER.log(Level.INFO, "  ├─ Nodes Explored:  {0}", statsV.nodes);
 		LOGGER.log(Level.INFO, "  ├─ Leaves Evaluated: {0}", statsV.leaves);
@@ -111,11 +111,11 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 		} else {
 			LOGGER.info("  └─ Branches Pruned:  (N/A - MiniMax has no pruning)");
 		}
-		
+
 		LOGGER.log(Level.INFO, "\nHORIZONTAL ({0}):", labelH);
 		LOGGER.log(Level.INFO, "  ├─ Nodes Explored:  {0}", statsH.nodes);
 		LOGGER.log(Level.INFO, "  └─ Leaves Evaluated: {0}", statsH.leaves);
-		
+
 		// Comparative summary
 		LOGGER.info("\n┌─ COMPARISON ──────────────────────────────────────┐");
 		long totalNodesExp = statsV.nodes + statsH.nodes;
@@ -194,7 +194,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 	 */
 	private static void playMatchAlphabetaVsMinimax() {
 		LOGGER.info("=== AlphaBeta vs MiniMax ===\n");
-		
+
 		DominosRole roleV = DominosRole.VERTICAL;
 		DominosRole roleH = DominosRole.HORIZONTAL;
 
@@ -227,7 +227,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 		DominosGame game = new DominosGame(players, initialBoard, algV, algH);
 		game.runGame();
 		game.displayStatistics();
-		
+
 		LOGGER.info("\n" + MATCH_COMPLETE_MESSAGE);
 		LOGGER.info("VERTICAL (AlphaBeta, depth 4) vs HORIZONTAL (MiniMax, depth 2)");
 	}
@@ -238,7 +238,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 	 */
 	private static void playMatchAlphabetaVsAlphabeta() {
 		LOGGER.info("=== AlphaBeta vs AlphaBeta ===\n");
-		
+
 		DominosRole roleV = DominosRole.VERTICAL;
 		DominosRole roleH = DominosRole.HORIZONTAL;
 
@@ -264,7 +264,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 		DominosGame game = new DominosGame(players, initialBoard, algV, algH);
 		game.runGame();
 		game.displayStatistics();
-		
+
 		LOGGER.info("\n" + MATCH_COMPLETE_MESSAGE);
 		LOGGER.info("VERTICAL (AlphaBeta, depth 4) vs HORIZONTAL (AlphaBeta, depth 2)");
 	}
@@ -275,7 +275,7 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 	 */
 	private static void playMatchMinimaxVsMinimax() {
 		LOGGER.info("=== MiniMax vs MiniMax ===\n");
-		
+
 		DominosRole roleV = DominosRole.VERTICAL;
 		DominosRole roleH = DominosRole.HORIZONTAL;
 

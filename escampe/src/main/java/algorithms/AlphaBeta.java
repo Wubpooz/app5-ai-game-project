@@ -11,8 +11,7 @@ import java.util.logging.Logger;
  * Alpha-Beta Pruning Algorithm - optimized version of MiniMax
  * Eliminates branches that cannot affect the final decision
  */
-public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
-    implements GameAlgorithm<M,R,B> {
+public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> implements GameAlgorithm<M,R,B> {
 
 	private static final Logger LOGGER = Logger.getLogger(AlphaBeta.class.getName());
 
@@ -36,10 +35,10 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 	// Statistics
 	/** number of internal visited (developed) nodes (for stats) */
 	private int nbNodes;
-	
+
 	/** number of leaves nodes (for stats) */
 	private int nbLeaves;
-	
+
 	/** number of pruned nodes (for stats) */
 	private int nbPruned;
 
@@ -73,15 +72,15 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 	public String toString() {
 		return "AlphaBeta(ProfMax=" + depthMax + ")";
 	}
-	
+
 	public int getNbNodes() {
 		return nbNodes;
 	}
-	
+
 	public int getNbLeaves() {
 		return nbLeaves;
 	}
-	
+
 	public int getNbPruned() {
 		return nbPruned;
 	}
@@ -98,7 +97,7 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 	/*
 	 * PRIVATE METHODS ===============
 	 */
-	
+
 	/**
 	 * Root level search - tries all possible moves and returns the best one
 	 */
@@ -107,7 +106,7 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 		int bestValue = Integer.MIN_VALUE;
 		int alpha = Integer.MIN_VALUE;
 		int beta = Integer.MAX_VALUE;
-		
+
 		for (M move : board.possibleMoves(playerRole)) {
 			B newBoard = board.play(move, playerRole);
 			int value = minValue(newBoard, playerMinRole, depthMax - 1, alpha, beta);
@@ -131,13 +130,13 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 			nbLeaves++;
 			return h.eval(board, playerMaxRole);
 		}
-		
+
 		int value = Integer.MIN_VALUE;
 		for (M move : board.possibleMoves(playerRole)) {
 			B newBoard = board.play(move, playerRole);
 			value = Math.max(value, minValue(newBoard, playerMinRole, depth - 1, alpha, beta));
 			alpha = Math.max(alpha, value);
-			
+
 			// Alpha-Beta Pruning: if alpha >= beta, we can prune remaining branches
 			if (alpha >= beta) {
 				nbPruned++;
@@ -159,13 +158,13 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 			nbLeaves++;
 			return h.eval(board, playerMaxRole);
 		}
-		
+
 		int value = Integer.MAX_VALUE;
 		for (M move : board.possibleMoves(playerRole)) {
 			B newBoard = board.play(move, playerRole);
 			value = Math.min(value, maxValue(newBoard, playerMaxRole, depth - 1, alpha, beta));
 			beta = Math.min(beta, value);
-			
+
 			// Alpha-Beta Pruning: if alpha >= beta, we can prune remaining branches
 			if (alpha >= beta) {
 				nbPruned++;

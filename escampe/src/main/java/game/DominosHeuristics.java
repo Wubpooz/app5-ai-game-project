@@ -4,9 +4,8 @@ import interfaces.IHeuristic;
 
 public class DominosHeuristics {
 
-    private DominosHeuristics() { }
+  private DominosHeuristics() { }
 
-	
   // if you have more moves than your opponent, you are in a better position, so the heuristic returns 2, in equal position it returns 1, and in a worse position it returns 0
 	public static final IHeuristic<DominosBoard, DominosRole>  hVertical = (board, role) -> {
     if(board.isGameOver()) {
@@ -21,7 +20,7 @@ public class DominosHeuristics {
     	return board.nbHorizontalMoves() > board.nbVerticalMoves() ? 2 : 0;
     }
   };
-    
+ 
 
 	public static final IHeuristic<DominosBoard, DominosRole> hHorizontal = (board, role) -> {
     if(board.isGameOver()) {

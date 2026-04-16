@@ -10,6 +10,4 @@ package interfaces;
  * Exemple 
  * 	enum Colors {BLACK,WHITE} implements IRole
  */
-public interface IRole {
-	
-}
+public interface IRole {}

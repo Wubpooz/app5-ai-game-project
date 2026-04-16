@@ -14,14 +14,14 @@ import game.Score;
  * 
  */
 public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> {
-	
+
 	/**
 	 * returns the possible moves a player having the playerRole	
 	 * @param playerRole
 	 * @return a list of all possible moves for the player having the playerRole
 	 */
 	ArrayList<M> possibleMoves(R playerRole);
-	
+
 	/** play move on the board, played by a player having the playerRole  
 	 * 
 	 * @param move
@@ -29,7 +29,7 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M,R,B
 	 * @return the successor board
 	 */
 	B play(M move, R playerRole);
-	
+
 	/**
 	 * checks that move is valid for the player having the playerRole
 	 * @param move
@@ -44,11 +44,11 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M,R,B
 	 */
 	boolean isGameOver();
 
-	
+
 	/**
 	 * returns the scores for each role (when the game is over)
 	 * @return
 	 */	
 	ArrayList<Score<R>> getScores();
-	
+
 }

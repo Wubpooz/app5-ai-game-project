@@ -7,22 +7,17 @@ import java.util.ArrayList;
 
 public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoard> {
 
-	private static int defaultGridSize = 7;
+	private static final int DEFAULT_GRID_SIZE = 7;
 
-	// --------- Class Attribute ---------
-
-	private static int gridSize = defaultGridSize;
+	private static int gridSize = DEFAULT_GRID_SIZE;
 
 	private enum SQUARE {
 		EMPTY, VERTICAL, HORIZONTAL
 	}
 
-	// ---------------------- Attributes ---------------------
-
 	private final SQUARE[][] boardGrid;
 
 	// ---------------------- Constructors ---------------------
-
 	public DominosBoard() {
 		boardGrid = new SQUARE[gridSize][gridSize];
 		for (int i = 0; i < gridSize; i++)
@@ -30,21 +25,17 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 				boardGrid[i][j] = SQUARE.EMPTY;
 	}
 
-	// Constructors
-
 	public DominosBoard(DominosBoard other) {
 		boardGrid = other.copyGrid();
 	}
 
-	
 	private DominosBoard(SQUARE[][] other) {
 		boardGrid = new SQUARE[gridSize][gridSize];
 		for (int i = 0; i < gridSize; i++)
-			System.arraycopy(other[i], 0, boardGrid[i], 0, gridSize);
+		System.arraycopy(other[i], 0, boardGrid[i], 0, gridSize);
 	}
 
 	// ------------------- Getters / Setters -------------------
-
 	protected int retGridSize() {
 		return gridSize;
 	}
@@ -54,7 +45,6 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 	}
 
 	// --------------------- IBoard Methods ---------------------
-
 	@Override
 	public DominosBoard play(DominosMove move, DominosRole playerRole) {
 		SQUARE[][] newGrid = copyGrid();
@@ -86,7 +76,6 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 		return (boardGrid[x][y] == SQUARE.EMPTY)
 				&& ((playerRole == DominosRole.VERTICAL) ? (boardGrid[x + 1][y] == SQUARE.EMPTY)
 						: (boardGrid[x][y + 1] == SQUARE.EMPTY));
-
 	}
 
 	@Override
@@ -95,8 +84,6 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 	}
 
 	// --------------------- Other Methods ---------------------
-
-
 	private ArrayList<DominosMove> freeVerticalMoves() {
 		ArrayList<DominosMove> allPossibleMoves = new ArrayList<>();
 		for (int i = 0; i < gridSize- 1; i++) { 			// lines

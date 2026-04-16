@@ -7,12 +7,7 @@ import interfaces.IRole;
  *
  * @param <Role>
  */
-
-
 public class Player<R extends IRole> {
-	
-	// ----------- Attributes  ------------
-	
 	/**
 	 * the role of the player in the game
 	 */
@@ -23,8 +18,18 @@ public class Player<R extends IRole> {
 	 */
 	String id;
 
-	// ----------- Getters / Setters  ------------
-	
+	// ----------- Constructors ------------
+	public Player(R role) {
+    this.role = role;
+    this.id = "";
+  }
+		
+	public Player(R role, String id) {
+		this(role);
+		this.id = id;
+	}
+
+  // ----------- Getters / Setters  ------------
 	public String getId() {
 		return id;
 	}
@@ -35,23 +40,11 @@ public class Player<R extends IRole> {
 
 	public void setRole(R role) {
 		this.role = role;
-			}
-	// ----------- Constructors ------------
-
-	public Player(R role) {
-			this.role = role;
-			this.id = "";
-}
-			
-	public Player(R role, String id) {
-		this(role);
-		this.id = id;
 	}
-	
+
 	// ----------- Other Methods ------------
 	public String toString() {
 		return "" + role + ( id.isEmpty() ? "" : " (" + id + ")");
 	}
-	
 
 }

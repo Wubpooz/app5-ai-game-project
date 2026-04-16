@@ -3,17 +3,17 @@ package game;
 import interfaces.IMove;
 
 public class DominosMove implements IMove {
-	
+
 	public final int x;
     public final int y;
-    
+
     DominosMove(int x, int y){
-        this.x = x;
-        this.y = y;
+      this.x = x;
+      this.y = y;
     }
 
     @Override
     public String toString() {
-        return "Move{" + x + "," + y + "}";
+      return "Move{" + x + "," + y + "}";
     }
 }
