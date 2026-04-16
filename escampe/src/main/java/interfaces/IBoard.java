@@ -1,6 +1,7 @@
-package iialib.games.model;
+package interfaces;
 
 import java.util.ArrayList;
+import game.Score;
 
 /**
  * Used to chararacterize the boards.he 
@@ -12,14 +13,14 @@ import java.util.ArrayList;
  * 
  * 
  */
-public interface IBoard<Move extends IMove, Role extends IRole, Board extends IBoard<Move,Role,Board>> {
+public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> {
 	
 	/**
 	 * returns the possible moves a player having the playerRole	
 	 * @param playerRole
 	 * @return a list of all possible moves for the player having the playerRole
 	 */
-	ArrayList<Move> possibleMoves(Role playerRole);
+	ArrayList<M> possibleMoves(R playerRole);
 	
 	/** play move on the board, played by a player having the playerRole  
 	 * 
@@ -27,7 +28,7 @@ public interface IBoard<Move extends IMove, Role extends IRole, Board extends IB
 	 * @param playerRole
 	 * @return the successor board
 	 */
-	Board play(Move move, Role playerRole);
+	B play(M move, R playerRole);
 	
 	/**
 	 * checks that move is valid for the player having the playerRole
@@ -35,7 +36,7 @@ public interface IBoard<Move extends IMove, Role extends IRole, Board extends IB
 	 * @param playerRole
 	 * @return yes if the move is valid for  playerRole
 	 */
-	boolean isValidMove(Move move, Role playerRole);
+	boolean isValidMove(M move, R playerRole);
 
 	/**
 	 * checks that the board corresponds to an end of game
@@ -48,6 +49,6 @@ public interface IBoard<Move extends IMove, Role extends IRole, Board extends IB
 	 * returns the scores for each role (when the game is over)
 	 * @return
 	 */	
-	ArrayList<Score<Role>> getScores();
+	ArrayList<Score<R>> getScores();
 	
 }

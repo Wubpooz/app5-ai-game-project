@@ -1,10 +1,10 @@
-package iialib.games.algs.algorithms;
+package algorithms;
 
-import iialib.games.algs.GameAlgorithm;
-import iialib.games.algs.IHeuristic;
-import iialib.games.model.IBoard;
-import iialib.games.model.IMove;
-import iialib.games.model.IRole;
+import algorithms.GameAlgorithm;
+import interfaces.IHeuristic;
+import interfaces.IBoard;
+import interfaces.IMove;
+import interfaces.IRole;
 import java.util.logging.Logger;
 
 /**

@@ -1,8 +1,8 @@
-package games.dominos.ranking;
+package ranking;
 
-import games.dominos.*;
-import iialib.games.algs.AIPlayer;
-import iialib.games.algs.GameAlgorithm;
+import game.*;
+import game.AIPlayer;
+import algorithms.GameAlgorithm;
 
 import java.util.*;
 import java.util.logging.Level;
@@ -161,10 +161,10 @@ public class AIRankingSystem {
      */
     private void resetStatistics(GameAlgorithm<DominosMove, DominosRole, DominosBoard> algorithm) {
         try {
-            if (algorithm instanceof iialib.games.algs.algorithms.AlphaBeta<?, ?, ?>) {
-                ((iialib.games.algs.algorithms.AlphaBeta<DominosMove, DominosRole, DominosBoard>) algorithm).resetStatistics();
-            } else if (algorithm instanceof iialib.games.algs.algorithms.MiniMax<?, ?, ?>) {
-                ((iialib.games.algs.algorithms.MiniMax<DominosMove, DominosRole, DominosBoard>) algorithm).resetStatistics();
+            if (algorithm instanceof algorithms.AlphaBeta<?, ?, ?>) {
+                ((algorithms.AlphaBeta<DominosMove, DominosRole, DominosBoard>) algorithm).resetStatistics();
+            } else if (algorithm instanceof algorithms.MiniMax<?, ?, ?>) {
+                ((algorithms.MiniMax<DominosMove, DominosRole, DominosBoard>) algorithm).resetStatistics();
             }
         } catch (Exception e) {
             // Silently ignore if reset not available

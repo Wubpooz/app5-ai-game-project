@@ -1,6 +1,6 @@
-package games.dominos;
+package game;
 
-import iialib.games.model.IRole;
+import interfaces.IRole;
 
 public enum DominosRole implements IRole{ 
 		HORIZONTAL, 	// For the player playing its tiles hally

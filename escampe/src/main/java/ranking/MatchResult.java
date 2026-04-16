@@ -1,4 +1,4 @@
-package games.dominos.ranking;
+package ranking;
 
 /**
  * Records the results of multiple matches between two algorithm configurations.

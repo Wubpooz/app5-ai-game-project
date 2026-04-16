@@ -1,4 +1,4 @@
-package games.dominos;
+package game;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -6,12 +6,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import iialib.games.model.Score;
-import iialib.games.algs.AIPlayer;
-import iialib.games.algs.AbstractGame;
-import iialib.games.algs.GameAlgorithm;
-import iialib.games.algs.algorithms.MiniMax;
-import iialib.games.algs.algorithms.AlphaBeta;
+import game.Score;
+import game.AIPlayer;
+import game.AbstractGame;
+import algorithms.GameAlgorithm;
+import algorithms.MiniMax;
+import algorithms.AlphaBeta;
 
 public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosBoard> {
 

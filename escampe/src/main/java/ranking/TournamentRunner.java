@@ -1,4 +1,4 @@
-package games.dominos.ranking;
+package ranking;
 
 import java.util.logging.Logger;
 

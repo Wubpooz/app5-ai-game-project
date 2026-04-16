@@ -1,6 +1,6 @@
-package games.dominos;
+package game;
 
-import iialib.games.model.IMove;
+import interfaces.IMove;
 
 public class DominosMove implements IMove {
 	

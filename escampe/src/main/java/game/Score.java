@@ -1,21 +1,21 @@
-package iialib.games.model;
+package game;
+
+import interfaces.IRole;
 
 /**
  * class used to describe the score corresponding to each player role when the game is over
  */
-public class Score<Role extends IRole> {
+public class Score<R extends IRole> {
 	
 	/**
 	 * 
 	 */
-	public enum Status {WIN,LOOSE,TIE};
-	
-	// ----------- Attributes ------------
+        public enum Status {WIN,LOOSE,TIE}
 
-	/**
-	 * 
-	 */
-	private Role role;
+        /**
+         * 
+         */
+        private R role;
 	
 	/**
 	 * 
@@ -30,7 +30,7 @@ public class Score<Role extends IRole> {
 	// ----------- Constructors ------------
 
 
-	public Score(Role role, Status status, int score) {
+	public Score(R role, Status status, int score) {
 		super();
 		this.role = role;
 		this.status = status;
@@ -39,7 +39,7 @@ public class Score<Role extends IRole> {
 
 	// ----------- Getter / Setters  ------------
 
-	public Role getRole() {
+	public R getRole() {
 		return role;
 	}
 

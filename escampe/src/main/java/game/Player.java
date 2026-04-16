@@ -1,5 +1,6 @@
-package iialib.games.model;
+package game;
 
+import interfaces.IRole;
 
 /**
  * used to associate an real player identifier to a role
@@ -8,14 +9,14 @@ package iialib.games.model;
  */
 
 
-public class Player<Role extends IRole> {
+public class Player<R extends IRole> {
 	
 	// ----------- Attributes  ------------
 	
 	/**
 	 * the role of the player in the game
 	 */
-	Role role;
+	R role;
 	/**
 	 * An (optional) identifier characterizing the player having that role in the game
 	 * This is useful for instance in a tournament, for keeping tra
@@ -28,21 +29,21 @@ public class Player<Role extends IRole> {
 		return id;
 	}
 
-	public Role getRole() {
+	public R getRole() {
 		return role;
 	}
 
-	public void setRole(Role role) {
+	public void setRole(R role) {
 		this.role = role;
 			}
 	// ----------- Constructors ------------
 
-	public Player(Role role) {
+	public Player(R role) {
 			this.role = role;
 			this.id = "";
 }
 			
-	public Player(Role role, String id) {
+	public Player(R role, String id) {
 		this(role);
 		this.id = id;
 	}

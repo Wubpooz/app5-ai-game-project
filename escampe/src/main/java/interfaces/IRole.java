@@ -1,4 +1,4 @@
-package iialib.games.model;
+package interfaces;
 
 /**
  * Used to represent characterize the role in the game of the different players

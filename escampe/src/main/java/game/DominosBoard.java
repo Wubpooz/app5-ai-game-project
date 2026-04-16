@@ -1,17 +1,17 @@
-package games.dominos;
+package game;
 
-import iialib.games.model.IBoard;
-import iialib.games.model.Score;
+import interfaces.IBoard;
+import game.Score;
 
 import java.util.ArrayList;
 
 public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoard> {
 
-	private static int DEFAULT_GRID_SIZE = 7;
+	private static int defaultGridSize = 7;
 
 	// --------- Class Attribute ---------
 
-	private static int GRID_SIZE = DEFAULT_GRID_SIZE;
+	private static int gridSize = defaultGridSize;
 
 	private enum SQUARE {
 		EMPTY, VERTICAL, HORIZONTAL
@@ -24,9 +24,9 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 	// ---------------------- Constructors ---------------------
 
 	public DominosBoard() {
-		boardGrid = new SQUARE[GRID_SIZE][GRID_SIZE];
-		for (int i = 0; i < GRID_SIZE; i++)
-			for (int j = 0; j < GRID_SIZE; j++)
+		boardGrid = new SQUARE[gridSize][gridSize];
+		for (int i = 0; i < gridSize; i++)
+			for (int j = 0; j < gridSize; j++)
 				boardGrid[i][j] = SQUARE.EMPTY;
 	}
 
@@ -38,19 +38,19 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 
 	
 	private DominosBoard(SQUARE[][] other) {
-		boardGrid = new SQUARE[GRID_SIZE][GRID_SIZE];
-		for (int i = 0; i < GRID_SIZE; i++)
-			System.arraycopy(other[i], 0, boardGrid[i], 0, GRID_SIZE);
+		boardGrid = new SQUARE[gridSize][gridSize];
+		for (int i = 0; i < gridSize; i++)
+			System.arraycopy(other[i], 0, boardGrid[i], 0, gridSize);
 	}
 
 	// ------------------- Getters / Setters -------------------
 
 	protected int retGridSize() {
-		return GRID_SIZE;
+		return gridSize;
 	}
 
 	protected static void setGridSize(int n) {
-		GRID_SIZE = n;
+		gridSize = n;
 	}
 
 	// --------------------- IBoard Methods ---------------------
@@ -99,8 +99,8 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 
 	private ArrayList<DominosMove> freeVerticalMoves() {
 		ArrayList<DominosMove> allPossibleMoves = new ArrayList<>();
-		for (int i = 0; i < GRID_SIZE- 1; i++) { 			// lines
-			for (int j = 0; j < GRID_SIZE ; j++) { 	// columns
+		for (int i = 0; i < gridSize- 1; i++) { 			// lines
+			for (int j = 0; j < gridSize ; j++) { 	// columns
 				if ((boardGrid[i][j] == SQUARE.EMPTY) && (boardGrid[i + 1][j] == SQUARE.EMPTY)) // possible move
 					allPossibleMoves.add(new DominosMove(i, j));
 			}
@@ -110,8 +110,8 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 
 	private ArrayList<DominosMove> freeHorizontalMoves() {
 		ArrayList<DominosMove> allPossibleMoves = new ArrayList<>();
-		for (int i = 0; i < GRID_SIZE; i++) { 		// lines
-			for (int j = 0; j < GRID_SIZE - 1; j++) { 		// columns
+		for (int i = 0; i < gridSize; i++) { 		// lines
+			for (int j = 0; j < gridSize - 1; j++) { 		// columns
 				if ((boardGrid[i][j] == SQUARE.EMPTY) && (boardGrid[i ][j+ 1] == SQUARE.EMPTY)) // possible move
 					allPossibleMoves.add(new DominosMove(i, j));
 			}
@@ -120,16 +120,16 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 	}
 
 	private SQUARE[][] copyGrid() {
-		SQUARE[][] newGrid = new SQUARE[GRID_SIZE][GRID_SIZE];
-		for (int i = 0; i < GRID_SIZE; i++)
-			System.arraycopy(boardGrid[i], 0, newGrid[i], 0, GRID_SIZE);
+		SQUARE[][] newGrid = new SQUARE[gridSize][gridSize];
+		for (int i = 0; i < gridSize; i++)
+			System.arraycopy(boardGrid[i], 0, newGrid[i], 0, gridSize);
 		return newGrid;
 	}
 
 	public String toString() {
 		StringBuilder retstr = new StringBuilder("");
-		for (int i = 0; i < GRID_SIZE; i++) {
-			for (int j = 0; j < GRID_SIZE; j++)
+		for (int i = 0; i < gridSize; i++) {
+			for (int j = 0; j < gridSize; j++)
 				if (boardGrid[i][j] == SQUARE.EMPTY)
 					retstr.append("-");
 				else if (boardGrid[i][j] == SQUARE.VERTICAL)
@@ -143,8 +143,8 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 
 	public int nbHorizontalMoves() {
 		int nbMoves = 0;
-		for (int i = 0; i < GRID_SIZE; i++) {
-			for (int j = 0; j < GRID_SIZE - 1; j++) {
+		for (int i = 0; i < gridSize; i++) {
+			for (int j = 0; j < gridSize - 1; j++) {
 				if (boardGrid[i][j] == SQUARE.EMPTY && boardGrid[i][j + 1] == SQUARE.EMPTY)
 					nbMoves++;
 			}
@@ -154,8 +154,8 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 
 	public int nbVerticalMoves() {
 		int nbMoves = 0;
-		for (int i = 0; i < GRID_SIZE; i++) {
-			for (int j = 0; j < GRID_SIZE - 1; j++) {
+		for (int i = 0; i < gridSize; i++) {
+			for (int j = 0; j < gridSize - 1; j++) {
 				if (boardGrid[j][i] == SQUARE.EMPTY && boardGrid[j + 1][i] == SQUARE.EMPTY)
 					nbMoves++;
 			}

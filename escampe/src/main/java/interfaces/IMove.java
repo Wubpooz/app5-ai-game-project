@@ -1,4 +1,4 @@
-package iialib.games.model;
+package interfaces;
 
 /**
  * used to characterize game moves

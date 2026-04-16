@@ -1,13 +1,13 @@
-package iialib.games.algs;
+package game;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import iialib.games.model.IBoard;
-import iialib.games.model.IMove;
-import iialib.games.model.IRole;
-import iialib.games.model.Score;
+import interfaces.IBoard;
+import interfaces.IMove;
+import interfaces.IRole;
+import game.Score;
 
 public abstract class AbstractGame<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> {
 

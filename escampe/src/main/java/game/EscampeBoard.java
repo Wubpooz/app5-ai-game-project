@@ -1,4 +1,6 @@
-public interface Partie1 {
+package game;
+
+public interface EscampeBoard {
   /**
    * initialise un plateau à partir d’un fichier texte
    * 
