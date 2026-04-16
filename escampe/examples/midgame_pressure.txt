@@ -1,0 +1,13 @@
+% Additional mid-game tactical setup
+% NEXT_BLANC=1
+% NEXT_NOIR=3
+% PLACED_NOIR=true
+% PLACED_BLANC=true
+% ABCDEF
+01 n--b-- 01
+02 --b-Nb 02
+03 -n---- 03
+04 b--n-- 04
+05 -B---n 05
+06 --n-b- 06
+% ABCDEF

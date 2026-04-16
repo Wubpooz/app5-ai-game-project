@@ -1,0 +1,13 @@
+% Mid-game position from requirement figure 6
+% NEXT_BLANC=2
+% NEXT_NOIR=ANY
+% PLACED_NOIR=true
+% PLACED_BLANC=true
+% ABCDEF
+01 nnN--- 01
+02 --b--- 02
+03 -----b 03
+04 b-nn-- 04
+05 --b--- 05
+06 n-B--b 06
+% ABCDEF

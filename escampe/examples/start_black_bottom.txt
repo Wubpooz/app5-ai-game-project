@@ -1,0 +1,13 @@
+% Initial setup variant (black starts from bottom rows)
+% NEXT_NOIR=ANY
+% NEXT_BLANC=ANY
+% PLACED_NOIR=true
+% PLACED_BLANC=true
+% ABCDEF
+01 n-N-n- 01
+02 -n-n-n 02
+03 ------ 03
+04 ------ 04
+05 -b-b-b 05
+06 b-B-b- 06
+% ABCDEF

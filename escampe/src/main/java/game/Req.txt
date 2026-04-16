@@ -1,0 +1,69 @@
+Il vous est demandé de vous concentrer dans cette partie sur les aspects spécifiques liés à la gestion
+des plateaux et au calcul des coups pour ce jeu.
+1. Coder une classe JAVA EscampeBoard permettant de représenter une configuration de jeu. Vous
+ferez en sorte que cette classe implémente les méthodes de l’interface Partie1.java décrite dans
+la figure 3 et permettant de :
+• lire/sauvegarder un plateau dans un fichier
+• tester une fin de partie
+• tester la validité d’un coup
+• jouer un coup
+Remarque : afin de réduire au minimum les contraintes d’interactions avec l’arbitre lors
+du tournoi, vous devez utiliser les conventions suivantes. Le coup sera présenté sous la forme
+d’une chaîne de caractères de type “B1-D1” (qui déplace la pièce en case B1 vers la case D1),
+ou de type “C6/A6/B5/D5/E6/F5” (qui pose le Licorne sur la case C6, et les paladins sur les
+cases A6, B5, D5, E6, F5) lors de la première disposition des pièces en début de partie. Quand
+un joueur ne peut pas jouer et doit passer son tour, il envoie “E”.
+2. Ajouter dans le fichier EscampeBoard.java une méthode main illustrant l’utilisation de ces
+méthodes sur des exemples convaincants.
+Format de sauvegarde des plateaux
+Les fichiers de saisie/sauvegarde de plateaux doivent être des fichiers texte comportant au moins
+6 lignes consécutives, correspondant respectivement aux 6 lignes du plateau. Les lignes sont indicées
+de bas en haut, et les colonnes de gauche à droite (cf. figure 5).
+Les lignes du fichier décrivent les lignes du plateau à l’aide des caractères suivants : ”N” : licorne
+noire ; ”n” : paladin noir ; ”B” : licorne blanche ; ”b” : paladin blanc ; ”-” : case vide. Ces lignes
+commencent et finissent par un numéro. Toute autre ligne doit nécessairement débuter par le caractère
+”%” et sera considérée comme un commentaire, donc ignorée lors de la lecture.
+La figure 6 décrit un exemple pour un tel fichier.
+
+
+
+
+
+
+
+
+
+
+1 2 2 3 1 2
+3 1 3 1 3 2
+2 3 1 2 1 3
+2 1 3 2 3 1
+1 3 1 3 1 2
+3 2 2 1 3 2
+Figure 4 – Carte des types de liseré sur le plateau, qui vous sera utile pour l’implémentation de
+l’interface Partie1.
+5
+% ABCDEF
+01 bb---- 01
+02 -Bb-bb 02
+03 ------ 03
+04 ------ 04
+05 -n-n-n 05
+06 n-N-n- 06
+% ABCDEF
+Figure 5 – Exemple de situation initiale ( Noirs : licorne en C6 ; paladins en A6, B5, D5, E6, F5.
+Blancs : licorne en C1 ; paladins en A3, C2, C5, F1, F4.)
+% ABCDEF
+01 nnN--- 01
+02 --b--- 02
+03 -----b 03
+04 b-nn-- 04
+05 --b--- 05
+06 n-B--b 06
+% ABCDEF
+Figure 6 – Exemple de situation intermédiaire ( Noirs : licorne en C1 ; paladins en A1, B1, C4, D4,
+A6. Blancs : licorne en C6 ; paladins en A4, C5, C2, F6, F3.) Nous partons du principe que vous avez
+les blancs, et que le coup précédent de Noir l’a amené en D4. Vous avez en C2 un paladin capable de
+prendre la licorne adverse (en passant par D2 et D1 ) ; or votre adversaire, en atteignant D4, vient
+de vous obliger à jouer une pièce partant d’une case à liseré double... Si vous choisissez F6-E5, Noir
+devra jouer A1-A2, atteignant alors une case triple, et permettant ainsi C2 X C1.
