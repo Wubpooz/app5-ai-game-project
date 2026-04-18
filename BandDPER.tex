@@ -12,6 +12,7 @@
 \usepackage{xcolor}
 \usepackage{float}
 \usepackage{placeins}
+\usepackage{fancyhdr}
 
 \graphicspath{{docs/}}
 
@@ -25,6 +26,7 @@
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.6em}
+\setlength{\headheight}{15pt}
 \setlist[itemize]{leftmargin=1.4em}
 \setlist[enumerate]{leftmargin=1.4em}
 
@@ -39,9 +41,33 @@
   keepspaces=true
 }
 
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\thesubsection\ #1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small BandDPER}
+\fancyhead[C]{\nouppercase{\large\bfseries \rightmark}}
+\fancyfoot[L]{\small Mathieu WAHARTE}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{\small April 2026}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyhead[L]{\small BandDPER}
+  \fancyhead[C]{\nouppercase{\large\bfseries \rightmark}}
+  \fancyfoot[L]{\small Mathieu WAHARTE}
+  \fancyfoot[C]{\thepage}
+  \fancyfoot[R]{\small April 2026}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\footrulewidth}{0.4pt}
+}
+
 \title{BandDPER\\\large Band-Aware Dual-Perspective Equivariant ResNet}
-\author{}
-\date{}
+\author{Mathieu WAHARTE}
+\date{April 2026}
 
 \begin{document}
 
