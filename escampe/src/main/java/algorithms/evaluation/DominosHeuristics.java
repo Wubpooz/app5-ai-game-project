@@ -1,4 +1,7 @@
-package game;
+package algorithms.evaluation;
+
+import game.domino.DominosBoard;
+import game.domino.DominosRole;
 
 import interfaces.IHeuristic;
 

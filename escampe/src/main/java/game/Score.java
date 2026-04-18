@@ -6,19 +6,10 @@ import interfaces.IRole;
  * class used to describe the score corresponding to each player role when the game is over
  */
 public class Score<R extends IRole> {
-	/**
-	 * 
-	 */
-  public enum Status {WIN,LOOSE,TIE}
 
-  /**
-   * 
-   */
+  public enum Status {WIN, LOOSE, TIE}
+
   private R role;
-
-	/**
-	 * 
-	 */
 	private Status status;
 
 	/**

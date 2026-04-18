@@ -1,7 +1,8 @@
-package game;
+package game.domino;
 
 import interfaces.IBoard;
 import game.Score;
+import game.Score.Status;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package game;
+package game.domino;
 
 import interfaces.IRole;
 

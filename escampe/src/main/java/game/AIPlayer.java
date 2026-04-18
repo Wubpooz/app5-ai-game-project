@@ -3,7 +3,6 @@ package game;
 import interfaces.IBoard;
 import interfaces.IMove;
 import interfaces.IRole;
-import game.Player;
 
 public class AIPlayer<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> extends Player<R> {
 

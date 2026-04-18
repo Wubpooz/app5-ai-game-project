@@ -1,4 +1,4 @@
-package game;
+package game.domino;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,8 +10,9 @@ import game.Score;
 import game.AIPlayer;
 import game.AbstractGame;
 import algorithms.GameAlgorithm;
-import algorithms.MiniMax;
-import algorithms.AlphaBeta;
+import algorithms.search.AlphaBeta;
+import algorithms.search.MiniMax;
+import algorithms.evaluation.DominosHeuristics;
 
 public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosBoard> {
 

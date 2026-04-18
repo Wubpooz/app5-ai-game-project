@@ -1,13 +1,13 @@
 package ranking;
 
 import algorithms.GameAlgorithm;
-import algorithms.AlphaBeta;
-import algorithms.MiniMax;
+import algorithms.search.AlphaBeta;
+import algorithms.search.MiniMax;
+import game.domino.DominosBoard;
+import game.domino.DominosMove;
+import game.domino.DominosRole;
 import interfaces.IHeuristic;
-import game.DominosBoard;
-import game.DominosMove;
-import game.DominosRole;
-import game.DominosHeuristics;
+import algorithms.evaluation.DominosHeuristics;
 
 /**
  * Represents a configuration of an AI algorithm for ranking and comparison.
