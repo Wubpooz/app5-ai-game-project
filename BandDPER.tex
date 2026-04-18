@@ -1,0 +1,403 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{placeins}
+
+\graphicspath{{docs/}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue,
+  hypertexnames=false
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\setlist[itemize]{leftmargin=1.4em}
+\setlist[enumerate]{leftmargin=1.4em}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  showstringspaces=false,
+  keepspaces=true
+}
+
+\title{BandDPER\\\large Band-Aware Dual-Perspective Equivariant ResNet}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\clearpage
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{dual_perspective_flowchart.png}
+  \caption{Model architecture flowchart for BandDPER.}
+  \label{fig:model-architecture-flowchart}
+\end{figure}
+\FloatBarrier
+
+\clearpage
+\section{Analysis}
+
+\subsection{Problem Statement}
+Since the game is a full-information, deterministic, zero-sum game with a small board ($6\times6$) and a fixed topology but non uniform (the band map), we can leverage strong domain knowledge to design an efficient and effective evaluation function. The key challenge is to capture the complex interactions between pieces, the band constraints (creates strong local dependencies between adjacent squares), and the strategic patterns that emerge from the unique movement rules.
+
+\subsection{Requirements}
+First, we can be certain that the evaluation function should return a scalar in $[-1, +1]$, where -1 represents a losing position for the current player, +1 represents a winning position, and values in between represent varying degrees of advantage.
+
+The function must capture several key signals:
+\begin{itemize}
+  \item Which pieces can legally move right now (band constraint)
+  \item How many moves each side has (mobility asymmetry)
+  \item Proximity of attackers to the opponent's unicorn, weighted by band alignment
+  \item Unicorn escape routes
+  \item Structural patterns (corridor control, band-type distribution)
+\end{itemize}
+
+\subsection{Why a Neural Network}
+Compared to our handcrafted evaluation function which already captures the most obvious signals, a neural network can learn nonlinear interactions, generalize easily from training data and capture structural patterns that were not encoded in our formula.
+
+The main drawback is that it would be slower but according to \href{https://arxiv.org/abs/1712.01815}{AlphaZero}, a better evaluation with a shallower depth can outperform a deeper search with a worse evaluation. Furthermore, the game is very small ($6\times6$ with 12 pieces) and networks are heavily researched and inference optimizations can make it nearly as fast as a handcrafted eval.
+
+\newpage
+\subsection{Existing Models}
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{L{0.12\textwidth} L{0.53\textwidth} L{0.27\textwidth}}
+    \toprule
+    Model & Notes & Recommendation \\
+    \midrule
+    MLP & Fast & No spatial awareness or relational reasoning, avoid \\
+    CNN & Exploits local spatial patterns and translation equivariance; fast enough & Ok but overkill; translation equivariance may be wrong \\
+    NNUE & Fast incremental updates, dual-perspective design, ClippedReLU (-1 to 1) activation & Doesn't fit current problem size, but dual-perspective and ClippedReLU are interesting ideas to borrow \\
+    ResNet & Good if baseline evaluation exists & Good, but lacks inherent spatial awareness \\
+    GNN & Movement graph; invariant to symmetries & Avoid due to dynamic graph changes, complexity, and slower performance \\
+    \bottomrule
+  \end{tabular}
+    \caption{Existing model candidates and recommendations.}
+    \label{tab:existing-models}
+\end{table}
+
+\clearpage
+\section{Model Architecture}
+
+This architecture blends known components into a novel evaluation network:
+\begin{itemize}
+  \item \textbf{Siamese CNN spatial encoder} with shared weights and dual-perspective input
+  \item \textbf{Asymmetric rook-aware kernels} ($1\times6$ and $6\times1$)
+  \item \textbf{Band topology encoded as fixed input channels}
+  \item \textbf{Residual trunk} with ClippedReLU at the perspective boundary
+\end{itemize}
+
+Core design elements:
+\begin{itemize}
+  \item \textbf{Siamese Network} (Shared-weight dual-perspective encoding, \href{https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html}{Bromley et al. - 1993})
+  \item \textbf{ResNet} (CNN + residual blocks, \href{https://arxiv.org/abs/1512.03385}{He et al. - 2015})
+  \item \textbf{Asymmetric convolutions} (Rook-aware ($1\times N$) + ($N\times 1$) kernels, \href{https://arxiv.org/abs/1512.00567}{Szegedy et al. - 2016})
+  \item \textbf{Atrous convolution} (Dilated convolutions for range, \href{https://arxiv.org/abs/1511.07122}{Chen et al. - 2015})
+  \item \textbf{ClippedReLU} bounded activations (\href{https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html}{NNUE - 2018})
+  \item \textbf{Dual accumulator} for game positions (\href{https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html}{NNUE - 2018})
+  \item \textbf{Value head} (Value network for board games, \href{https://arxiv.org/abs/1712.01815}{AlphaZero - 2017})
+\end{itemize}
+
+\textbf{Parameter Count}
+\begin{table}[htbp]
+  \centering
+  \caption{Approximate parameter count by component.}
+  \label{tab:parameter-count}
+  \begin{tabular}{L{0.58\textwidth} L{0.25\textwidth}}
+    \toprule
+    Component & Parameters \\
+    \midrule
+    Encoder (shared, used $\times2$) & $\sim$389,664 \\
+    ResBlock $\times3$ (dim=256) & $\sim$393,216 \\
+    Output head & $\sim$16,448 \\
+    \textbf{Total} & \textbf{$\sim$799,328} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This model would be around 3.2 MB in float32.
+We can devise a reduced variant with \texttt{embed\_dim} set to 64 and
+\texttt{num\_res\_blocks} set to 2, which would have around \textbf{200K parameters}
+and negligible accuracy loss, given the small board size and limited piece interactions.
+
+\newpage
+\subsection{Layers}
+
+\subsubsection{Input}
+For each perspective we have a $[9, 6, 6]$ tensor. For each board position, we have 9 channels:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Input channels for each perspective tensor.}
+  \label{tab:input-channels}
+  \begin{tabular}{L{0.10\textwidth} L{0.50\textwidth} L{0.28\textwidth}}
+    \toprule
+    Channel & Content & Type \\
+    \midrule
+    0 & My paladin positions & Dynamic 0/1 \\
+    1 & My unicorn position & Dynamic 0/1 \\
+    2 & Opponent paladin positions & Dynamic 0/1 \\
+    3 & Opponent unicorn position & Dynamic 0/1 \\
+    4 & Band-1 square mask & \textbf{Fixed} 0/1 \\
+    5 & Band-2 square mask & \textbf{Fixed} 0/1 \\
+    6 & Band-3 square mask & \textbf{Fixed} 0/1 \\
+    7 & Departure constraint mask & Dynamic 0/1 \\
+    8 & Legal landing squares (mobility map) & Dynamic 0/1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\emph{The Band masks are fixed binary inputs representing the spatial structure of the board.}
+
+This encodes the full current board state.
+The CNN will learn the spatial correlations between pieces and band types.
+Having two perspectives allows us to follow the \textbf{Siamese network principle}, where the same encoder processes both perspectives with shared weights, enabling the network to learn a unified representation of the game state from both players' viewpoints. Indeed, a position that is good for one player is bad for the other (menacing the unicorn is universally bad), so the network can learn to extract features that are relevant for both sides without needing separate encoders.
+
+\newpage
+\subsubsection{Shared Spatial Encoder}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{SSE.png}
+  \caption{Shared Spatial Encoder used for both player perspectives (shared weights).}
+  \label{fig:shared-spatial-encoder}
+\end{figure}
+\FloatBarrier
+
+Figure~\ref{fig:shared-spatial-encoder} details the encoder stack used to extract perspective-specific embeddings. With $B$ the batch size.
+
+\textbf{Notes}:
+\begin{itemize}
+  \item The first convolution captures \textbf{local spatial patterns} and piece interactions, which are crucial for evaluating immediate threats and opportunities. It's receptive field of $3\times3$ allows it to see adjacent pieces and band types.
+  \item The second convolution with dilation \textbf{expands the receptive field} (of $5\times5$) to capture longer-range interactions, such as potential rook movements and band constraints up to 2 steps.
+  \item \textbf{Asymmetric Kernels}: The $1\times6$ and $6\times1$ convolutions are designed to capture the rook-like movement patterns and corridor control in a single pass and encode a global spatial feature that a small $3\times3$ CNN kernel doesn't capture.
+  \item \textbf{BatchNorm}: Applied after each convolution to stabilize training and accelerate convergence.
+  \item \textbf{ClippedReLU}: Used in the encoder output to ensure all values are in the range $[0,1]$, preventing one perspective from dominating the other due to scale differences.
+  \item \textbf{Dual-Perspective Fusion}: The outputs from both perspectives are concatenated to form a unified representation \texttt{h} of shape $[B, 256]$, ensuring the network can leverage information from both players' viewpoints. Always pass the inputs in the order \texttt{[current\_player, opponent]}, mapped to \texttt{[white, black]}, so the network consistently evaluates the state from the current player's perspective.
+  \item Both perspectives are processed through the same encoder (shared weights) to learn a unified representation of the game state, enabling the network to generalize patterns that are relevant for both players (Siamese network principle).
+\end{itemize}
+
+\newpage
+\subsubsection{Residual Trunk}
+There is a trunk of 3 ResBlocks with skip connections. Each ResBlock consists of:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth,height=0.58\textheight,keepaspectratio]{residual_trunk.png}
+  \caption{Residual trunk structure with stacked ResBlocks and skip connections.}
+  \label{fig:residual-trunk}
+\end{figure}
+\FloatBarrier
+
+Figure~\ref{fig:residual-trunk} shows the repeated residual pattern used to refine the fused representation.
+
+\textbf{Notes}:
+\begin{itemize}
+  \item \textbf{Why residual blocks}: The network learns \emph{corrections} on top of a near-correct base representation. This is the right structure when training via minimax bootstrapping (the base eval is already reasonable, the network fixes its mistakes). Skip connections also prevent vanishing gradients with depth.
+  \item \textbf{Why ClippedReLU in ResBlocks}: Keeps activations bounded at every depth, preventing value explosion through the skip connections.
+\end{itemize}
+
+\newpage
+\subsubsection{Output Head}
+The output head is classical:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth,height=0.34\textheight,keepaspectratio]{output_head.png}
+  \caption{Output head producing a bounded scalar evaluation.}
+  \label{fig:output-head}
+\end{figure}
+\FloatBarrier
+
+Figure~\ref{fig:output-head} summarizes the final projection to a single score.
+
+No need for ClippedReLU here since Tanh already bounds the final output. The output is a scalar representing the evaluation of the position from the current player's perspective.
+
+\clearpage
+\section{Training}
+
+\subsection{Data Generation (Minimax Bootstrapping)}
+We use the \textbf{existing alpha-beta engine} at depth 4--6 to label positions with ``ground truth'' scores. The network learns to approximate deep search evaluations.
+Precisely, for each position sampled from self-play games, we run a minimax search to get the score and use it as the training label: \texttt{score\_label = minimax(board, depth=5) / MATE\_SCORE} (normalized to $[-1,1]$).
+This is a form of supervised learning where the target labels are generated by a stronger search algorithm.
+We aim at around 50K--100K labeled positions, which is sufficient for the network to learn meaningful patterns without overfitting. This can be generated in a reasonable time frame (1--2 hours) on a desktop CPU.
+
+Alternatively, we could use \textbf{TD-learning} where the network learns from its own predictions at the next state so it doesn't need explicit labels. However, this is more complex to implement and may require careful tuning of the learning rate and exploration strategy to ensure stable training despite the continuous training process advantage. Minimax bootstrapping is more straightforward and effective for our purposes.
+
+\subsection{Loss Function}
+We use \textbf{Mean Squared Error} (MSE) loss between the network's predicted score and the minimax score label:
+
+\begin{lstlisting}[language=Python]
+loss = F.mse_loss(prediction, target)
+\end{lstlisting}
+
+Additionally, we could include an auxiliary loss to predict the ``tension'' (number of attackers) which is a key signal in the game, but this is optional and may not be necessary if the main loss is sufficient for learning. It would also complicate the training pipeline since we would need to compute tension labels for each position.
+
+\subsection{Training Hardware}
+We used a GTX 1080 GPU for training, which is more than sufficient for this model size and dataset. Training should take around 30 minutes to 1 hour depending on the number of epochs and batch size.
+We installed CUDA then used the appropriate PyTorch wheels for CUDA 11.8, which is the maximum supported version for GTX 1080.
+
+\begin{lstlisting}[language=bash]
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+\end{lstlisting}
+
+\newpage
+\subsection{Export Pipeline}
+\begin{lstlisting}[language=Python]
+# 1. Fold BatchNorm into conv/linear weights (eliminates BN at inference)
+def fold_batchnorm(w, b, bn_mean, bn_var, bn_gamma, bn_beta, eps=1e-5):
+  std = (bn_var + eps).sqrt()
+  return w * (bn_gamma/std).view(-1,1,1,1), \
+      bn_gamma*(b-bn_mean)/std + bn_beta
+
+model = fold_all_batchnorms(model)
+
+# 2. Export all weights to JSON
+weights = {k: v.tolist() for k,v in model.state_dict().items()}
+weights["band1_mask"] = BAND1_MASK.tolist()  # fixed channels
+weights["band2_mask"] = BAND2_MASK.tolist()
+weights["band3_mask"] = BAND3_MASK.tolist()
+json.dump(weights, open("escampe_net_weights.json","w"))
+
+# 3. Save .pth for resuming training / HuggingFace upload
+torch.save(model.state_dict(), "escampe_net.pth")
+
+# 4. Push to HuggingFace (versioning/backup)
+api.upload_file("escampe_net.pth",
+                path_in_repo="escampe_net.pth",
+                repo_id="mathieu-waharte/escampe-eval")
+\end{lstlisting}
+
+\clearpage
+\section{Inference}
+
+We load the weights once at startup, then run forward pass manually:
+
+\begin{lstlisting}[language=Java]
+// Pre-allocate all activation buffers (no GC pressure in hot path)
+float[][][] convBuf1, convBuf2, rowBuf, colBuf;
+float[]     encBuf, wEmbed, bEmbed, trunk, h1, outBuf;
+
+public float evaluate(EscampeBoard board) {
+  float[][][] xMe  = boardToTensor(board, board.currentPlayer());
+  float[][][] xOpp = boardToTensor(board, board.opponent());
+
+  float[] w = encode(xMe);   // [128], ClippedReLU output
+  float[] b = encode(xOpp);  // [128], ClippedReLU output
+
+  // Concatenate -> [256]
+  float[] h = concat(w, b);
+
+  // ResBlocks
+  for (ResBlockWeights rb : resBlocks) {
+    h = resBlock(h, rb);
+  }
+
+  // Output head
+  float[] out = linear(h, wOut1, bOut1); // [64], ReLU
+  out = relu(out);
+  float score = linear(out, wOut2, bOut2)[0]; // [1]
+  return (float) Math.tanh(score);
+}
+\end{lstlisting}
+
+\clearpage
+\section{Optimizations}
+
+\subsection{Policy head for move ordering}
+We propose adding a \textbf{policy head} to the network that outputs a probability distribution over the \textasciitilde60 possible moves. This is used purely for move ordering in the alpha-beta search, not for move selection directly. The policy head would be a simple linear layer on top of the trunk output \texttt{h}: \texttt{policy\_head = nn.Sequential(Linear(256,64), ReLU(), Linear(64,60), Softmax(dim=-1))}. This allows us to explore the most promising moves first, leading to better alpha-beta pruning and deeper search within the same time budget.
+
+Then for each node in the search tree, we would:
+\begin{enumerate}
+  \item Generate legal moves (using the existing move generator, very fast)
+  \item Call the network's \textbf{policy head} to get move probabilities and \textbf{sort} the legal moves accordingly. This is done once per node and is slower which is a worthwhile investment given the improved pruning it enables.
+  \item Run alpha-beta search with the well-ordered moves, which allows us to search much deeper due to better pruning.
+  \item At leaf nodes, we use the \textbf{handcrafted evaluation function} for a fast evaluation instead of calling the network, which is slower but unnecessary at the leaf since the handcrafted eval already captures the key signals for static positions. \textbf{/!\textbackslash} If the network isn't really slower than the evaluation, we should use it for leaves too.
+\end{enumerate}
+
+\subsection{Quantization}
+Here are the quantization choices for each layer, along with the rationale:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Quantization choices by layer.}
+  \label{tab:quantization-choices}
+  \begin{tabular}{L{0.30\textwidth} L{0.12\textwidth} L{0.16\textwidth} L{0.30\textwidth}}
+    \toprule
+    Layer & Params & Quantize? & Why \\
+    \midrule
+    Conv layers (encoder) & \textasciitilde33K & INT8 & Weights are small, well-distributed \\
+    Linear proj ($2688\to32$) & \textasciitilde86K & INT8 & Biggest layer, most to gain \\
+    ResBlock linears & \textasciitilde8K & INT8 & Clean after ClippedReLU \\
+    Output Linear($64\to1$) & 65 & keep float32 & Tiny, output precision matters \\
+    Band mask channels & fixed & N/A & Already binary (0/1) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+We expect around a $4\times$ reduction in model size and a $2$--$3\times$ speedup in inference time, with minimal accuracy loss ($<1\%$ on a well-trained model). The main bottleneck is the linear projection layer, which benefits the most from quantization. The convolutional layers are already small and fast, so the relative gain is smaller but still significant.
+
+\newpage
+In ONNX/PyTorch:
+\begin{lstlisting}[language=Python]
+# Post-training static quantization
+model.eval()
+model_q = torch.quantization.quantize_dynamic(
+  model,
+  {nn.Linear, nn.Conv2d},
+  dtype=torch.qint8
+)
+# Export to ONNX
+torch.onnx.export(model_q, (x_w, x_b), "escampe_net_q8.onnx")
+\end{lstlisting}
+
+And in Java with ONNX Runtime:
+\begin{lstlisting}[language=Java]
+// pom.xml: com.microsoft.onnxruntime:onnxruntime:1.17.0
+OrtEnvironment env = OrtEnvironment.getEnvironment();
+OrtSession session = env.createSession("escampe_net_q8.onnx");
+// ~1-2us inference for 25K param INT8 model via ONNX Runtime
+\end{lstlisting}
+
+\clearpage
+\section{References}
+
+\subsection{Papers and architecture references}
+\begin{itemize}
+  \item \href{https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html}{Bromley et al. - 1993} --- Siamese network / shared-weight dual-perspective encoding
+  \item \href{https://arxiv.org/abs/1512.03385}{He et al. - 2015} --- ResNet residual blocks
+  \item \href{https://arxiv.org/abs/1512.00567}{Szegedy et al. - 2016} --- asymmetric convolutions
+  \item \href{https://arxiv.org/abs/1511.07122}{Chen et al. - 2015} --- atrous (dilated) convolutions
+  \item \href{https://arxiv.org/abs/1712.01815}{AlphaZero - 2017} --- value head and improved evaluation via search
+  \item \href{https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html}{NNUE - 2018} --- ClippedReLU, dual accumulator, and neural evaluation concepts
+\end{itemize}
+
+\subsection{Tools and implementation references}
+\begin{itemize}
+  \item \href{https://download.pytorch.org/whl/cu118}{PyTorch CUDA 11.8 wheels} --- GPU build used for training on GTX 1080
+  \item \href{https://onnxruntime.ai}{ONNX Runtime} --- inference engine referenced for quantized model execution
+\end{itemize}
+
+\end{document}

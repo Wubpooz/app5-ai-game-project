@@ -2,3 +2,5 @@
 **/dist/
 *.log
 *.aux
+*.toc
+*.out
