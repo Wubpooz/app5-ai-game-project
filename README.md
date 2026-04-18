@@ -23,7 +23,7 @@
 This is a 2-player game. Each player has 4 paladins and 1 unicorn, either white or black.  
 The goal is to capture the opponent's unicorn by moving a paladin to its position.  
 The pieces are placed on a 6 by 6 grid. Each circle of the grid is either a simple, double, or triple-banded circle.  
-![alt text](image.png)
+![game board](docs/board.png)
 
 The game starts with the black player choosing a side (top or bottom) of the board and placing their pieces in the first two rows as he pleases. The white player places their pieces and starts the game.
 
