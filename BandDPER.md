@@ -283,6 +283,8 @@ OrtSession session = env.createSession("escampe_net_q8.onnx");
 - [Szegedy et al. - 2016](https://arxiv.org/abs/1512.00567) — asymmetric convolutions
 - [Chen et al. - 2015](https://arxiv.org/abs/1511.07122) — atrous (dilated) convolutions
 - [AlphaZero - 2017](https://arxiv.org/abs/1712.01815) — value head and improved evaluation via search
+- [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387) — small-board AlphaZero scaling
+- [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6) — transformer-based chess scaling insights
 - [NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html) — ClippedReLU, dual accumulator, and neural evaluation concepts
 
 ### Tools and implementation references
