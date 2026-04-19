@@ -542,14 +542,14 @@ public class EscampeBoard {
     Set<Position> targets = new HashSet<>();
     Set<Position> visited = new HashSet<>();
     visited.add(from);
-    dfsCollectTargets(from, steps, movingPiece, playerColor, visited, targets);
+    dfsCollectTargets(from, from, steps, movingPiece, playerColor, visited, targets);
     return targets;
   }
 
-  private void dfsCollectTargets(Position current, int remainingSteps, char movingPiece, PlayerColor playerColor,
+  private void dfsCollectTargets(Position origin, Position current, int remainingSteps, char movingPiece, PlayerColor playerColor,
       Set<Position> visited, Set<Position> targets) {
     if (remainingSteps == 0) {
-      if (!visited.isEmpty() && !current.equals(visited.iterator().next())) {
+      if (!current.equals(origin)) {
         targets.add(current);
       }
       return;
@@ -578,7 +578,7 @@ public class EscampeBoard {
       }
 
       visited.add(next);
-      dfsCollectTargets(next, remainingSteps - 1, movingPiece, playerColor, visited, targets);
+      dfsCollectTargets(origin, next, remainingSteps - 1, movingPiece, playerColor, visited, targets);
       visited.remove(next);
     }
   }
