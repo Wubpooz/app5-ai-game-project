@@ -2,7 +2,6 @@ package game.domino;
 
 import interfaces.IBoard;
 import game.Score;
-import game.Score.Status;
 
 import java.util.ArrayList;
 
@@ -33,7 +32,7 @@ public class DominosBoard implements IBoard<DominosMove, DominosRole, DominosBoa
 	private DominosBoard(SQUARE[][] other) {
 		boardGrid = new SQUARE[gridSize][gridSize];
 		for (int i = 0; i < gridSize; i++)
-		System.arraycopy(other[i], 0, boardGrid[i], 0, gridSize);
+		  System.arraycopy(other[i], 0, boardGrid[i], 0, gridSize);
 	}
 
 	// ------------------- Getters / Setters -------------------
