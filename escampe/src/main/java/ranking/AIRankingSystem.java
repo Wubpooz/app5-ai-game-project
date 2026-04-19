@@ -1,6 +1,5 @@
 package ranking;
 
-import game.*;
 import game.AIPlayer;
 import game.domino.DominosBoard;
 import game.domino.DominosGame;
@@ -11,7 +10,6 @@ import algorithms.GameAlgorithm;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * Tournament ranking system for AI algorithms.
@@ -186,7 +184,7 @@ public class AIRankingSystem {
         // Sort algorithms by win count
         List<Map.Entry<String, Integer>> sorted = winCounts.entrySet().stream()
             .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
-            .collect(Collectors.toList());
+            .toList();
         
         int totalPairings = algorithms.size() * (algorithms.size() - 1) / 2;
         int maxWinsPerAlgo = totalPairings * matchesPerPairing;

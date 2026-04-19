@@ -176,12 +176,10 @@ public class DominosGame extends AbstractGame<DominosMove, DominosRole, DominosB
 		}
 
 		switch (args[0].toLowerCase(Locale.ROOT)) {
-			case "alphabeta-vs-alphabeta":
-			case "abvsab":
+			case "alphabeta-vs-alphabeta", "abvsab":
 				playMatchAlphabetaVsAlphabeta();
 				break;
-			case "minimax-vs-minimax":
-			case "mvsmm":
+			case "minimax-vs-minimax", "mmvsmm":
 				playMatchMinimaxVsMinimax();
 				break;
 			default:
