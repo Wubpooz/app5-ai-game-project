@@ -1,4 +1,4 @@
-package game.escampe;
+package game;
 
 public class EscampeGame {
   

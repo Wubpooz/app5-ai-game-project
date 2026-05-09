@@ -1,10 +1,6 @@
 package ranking;
 
 import game.AIPlayer;
-import game.domino.DominosBoard;
-import game.domino.DominosGame;
-import game.domino.DominosMove;
-import game.domino.DominosRole;
 import algorithms.GameAlgorithm;
 
 import java.util.*;
