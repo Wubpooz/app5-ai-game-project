@@ -2,23 +2,10 @@ package game;
 
 import interfaces.IRole;
 
-/**
- * used to associate an real player identifier to a role
- *
- * @param <Role>
- */
 public class Player<R extends IRole> {
-	/**
-	 * the role of the player in the game
-	 */
 	R role;
-	/**
-	 * An (optional) identifier characterizing the player having that role in the game
-	 * This is useful for instance in a tournament, for keeping tra
-	 */
-	String id;
+	String id; // (optional)
 
-	// ----------- Constructors ------------
 	public Player(R role) {
     this.role = role;
     this.id = "";
@@ -29,7 +16,6 @@ public class Player<R extends IRole> {
 		this.id = id;
 	}
 
-  // ----------- Getters / Setters  ------------
 	public String getId() {
 		return id;
 	}
@@ -42,9 +28,7 @@ public class Player<R extends IRole> {
 		this.role = role;
 	}
 
-	// ----------- Other Methods ------------
 	public String toString() {
 		return "" + role + ( id.isEmpty() ? "" : " (" + id + ")");
 	}
-
 }

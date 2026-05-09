@@ -1,32 +1,11 @@
 package game;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.io.*;
+import java.util.*;
 
-/**
- * Board model for the Escampe game.
- * Supported move formats:
- * - Regular move: {@code B1-D1}
- * - Initial placement: {@code C6/A6/B5/D5/E6/F5}
- * - Pass: {@code E}
- */
 public class EscampeBoard {
 
   private static final int SIZE = 6;
-  private static final int FREE_BAND = -1;
 
   private static final char EMPTY = '-';
   private static final char BLACK_UNICORN = 'N';
@@ -34,18 +13,14 @@ public class EscampeBoard {
   private static final char WHITE_UNICORN = 'B';
   private static final char WHITE_PALADIN = 'b';
 
-  private static final Pattern FILE_ROW_PATTERN = Pattern.compile("^(\\d{1,2})\\s+([NnBb-]{6})\\s+(\\d{1,2})$");
-  private static final Pattern REGULAR_MOVE_PATTERN = Pattern.compile("^([A-Fa-f][1-6])\\s*-\\s*([A-Fa-f][1-6])$");
-  private static final Pattern COORD_PATTERN = Pattern.compile("^([A-Fa-f])([1-6])$");
-
-  // Band map indexed by [row-1][column], with row 1 at the bottom.
-  private static final int[][] BAND_MAP = {
-    { 1, 2, 2, 3, 1, 2 }, // row 1
-    { 3, 1, 3, 1, 3, 2 }, // row 2
-    { 2, 3, 1, 2, 1, 3 }, // row 3
-    { 2, 1, 3, 2, 3, 1 }, // row 4
-    { 1, 3, 1, 3, 1, 2 }, // row 5
-    { 3, 2, 2, 1, 3, 2 }  // row 6
+  // Liseret map (row 0 = line 01 bottom, col 0 = A)
+  private static final int[][] LISERET = {
+    {1, 2, 2, 3, 1, 2}, // row 01
+    {3, 1, 3, 1, 3, 2}, // row 02
+    {2, 3, 1, 2, 1, 3}, // row 03
+    {2, 1, 3, 2, 3, 1}, // row 04
+    {1, 3, 1, 3, 1, 2}, // row 05
+    {3, 2, 2, 1, 3, 2}  // row 06
   };
 
   private static final int[][] DIRECTIONS = {
@@ -55,701 +30,448 @@ public class EscampeBoard {
     { 0, -1 }
   };
 
-  private final char[][] board;
+  
+  // Board: board[row][col], row 0 = line 01 (bottom), col 0 = A, '-' = empty, 'B'/'b' = white unicorn/paladin, 'N'/'n' = black unicorn/paladin
+  private char[][] board = new char[SIZE][SIZE];
 
-  // Required starting band for each player on their next turn.
-  // FREE_BAND means no constraint (typically after a pass or initial state).
-  private int requiredBandForBlack;
-  private int requiredBandForWhite;
 
-  private boolean blackPlaced;
-  private boolean whitePlaced;
-
-  private enum PlayerColor {
-    BLACK,
-    WHITE
-  }
-
-  private record Position(int row, int col) {}
+  // Track which player has placed pieces (initial placement phase)
+  private boolean whitePlaced = false;
+  private boolean blackPlaced = false;
+  // Track last move destination for liseret constraint
+  private int lastMoveRow = -1;
+  private int lastMoveCol = -1;
 
   public EscampeBoard() {
-    this.board = new char[SIZE][SIZE];
-    clearBoard();
-    requiredBandForBlack = FREE_BAND;
-    requiredBandForWhite = FREE_BAND;
-    blackPlaced = false;
-    whitePlaced = false;
+    for (char[] r : board) Arrays.fill(r, '-');
   }
 
-  /**
-   * Initialise un plateau a partir d'un fichier texte.
-   *
-   * @param fileName le nom du fichier a lire
-   */
+  // =========== File I/O ===========
   public void setFromFile(String fileName) {
-    clearBoard();
-
-    Integer metaNextBlack = null;
-    Integer metaNextWhite = null;
-    Boolean metaPlacedBlack = null;
-    Boolean metaPlacedWhite = null;
-
-    Map<Integer, String> rows = new HashMap<>();
-    List<String> lines;
-    try {
-      lines = Files.readAllLines(Path.of(fileName), StandardCharsets.UTF_8);
+    // Reset all state before loading
+    for (char[] r : board) Arrays.fill(r, '-');
+    lastMoveRow = -1;
+    lastMoveCol = -1;
+    try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+      String line;
+      int rowIdx = 0;
+      while ((line = br.readLine()) != null && rowIdx < SIZE) {
+        line = line.trim();
+        if (line.isEmpty() || line.startsWith("%")) continue;
+        // Format: "01 nnN--- 01" or "01 -bBb-- 01"
+        String[] parts = line.split("\\s+");
+        if (parts.length < 2) continue;
+        String boardPart = parts[1];
+        if (boardPart.length() != SIZE) continue;
+        for (int c = 0; c < SIZE; c++) {
+          board[rowIdx][c] = boardPart.charAt(c);
+        }
+        rowIdx++;
+      }
+      // Infer placement state from board content
+      whitePlaced = hasPieces(PlayerColor.WHITE);
+      blackPlaced = hasPieces(PlayerColor.BLACK);
     } catch (IOException e) {
-      throw new IllegalArgumentException("Unable to read board file: " + fileName, e);
+      e.printStackTrace();
     }
-
-    for (String rawLine : lines) {
-      String line = rawLine.trim();
-      if (line.isEmpty()) {
-        continue;
-      }
-
-      if (line.startsWith("%")) {
-        String comment = line.substring(1).trim();
-        Integer nextBlack = parseBandMetadata(comment, "NEXT_NOIR");
-        if (nextBlack != null) {
-          metaNextBlack = nextBlack;
-        }
-        Integer nextWhite = parseBandMetadata(comment, "NEXT_BLANC");
-        if (nextWhite != null) {
-          metaNextWhite = nextWhite;
-        }
-        Boolean placedBlack = parseBooleanMetadata(comment, "PLACED_NOIR");
-        if (placedBlack != null) {
-          metaPlacedBlack = placedBlack;
-        }
-        Boolean placedWhite = parseBooleanMetadata(comment, "PLACED_BLANC");
-        if (placedWhite != null) {
-          metaPlacedWhite = placedWhite;
-        }
-        continue;
-      }
-
-      Matcher matcher = FILE_ROW_PATTERN.matcher(line);
-      if (!matcher.matches()) {
-        throw new IllegalArgumentException("Invalid board line: " + rawLine);
-      }
-
-      int leftIndex = Integer.parseInt(matcher.group(1));
-      int rightIndex = Integer.parseInt(matcher.group(3));
-      if (leftIndex != rightIndex || leftIndex < 1 || leftIndex > SIZE) {
-        throw new IllegalArgumentException("Invalid row indices in line: " + rawLine);
-      }
-
-      if (rows.put(leftIndex, matcher.group(2)) != null) {
-        throw new IllegalArgumentException("Duplicated row index in file: " + leftIndex);
-      }
-    }
-
-    if (rows.size() < SIZE) {
-      throw new IllegalArgumentException("Board file must contain at least 6 board rows");
-    }
-
-    for (int rowNumber = 1; rowNumber <= SIZE; rowNumber++) {
-      String row = rows.get(rowNumber);
-      if (row == null) {
-        throw new IllegalArgumentException("Missing board row " + rowNumber + " in file");
-      }
-      for (int col = 0; col < SIZE; col++) {
-        board[rowNumber - 1][col] = row.charAt(col);
-      }
-    }
-
-    validatePieceCounts();
-
-    requiredBandForBlack = (metaNextBlack != null) ? metaNextBlack : FREE_BAND;
-    requiredBandForWhite = (metaNextWhite != null) ? metaNextWhite : FREE_BAND;
-    blackPlaced = (metaPlacedBlack != null) ? metaPlacedBlack : hasAnyPiece(PlayerColor.BLACK);
-    whitePlaced = (metaPlacedWhite != null) ? metaPlacedWhite : hasAnyPiece(PlayerColor.WHITE);
   }
 
-  /**
-   * Sauve la configuration courante (plateau et etat de tour) dans un fichier.
-   *
-   * @param fileName le nom du fichier a sauvegarder
-   */
   public void saveToFile(String fileName) {
-    List<String> lines = new ArrayList<>();
-    lines.add("% Escampe board");
-    lines.add("% NEXT_NOIR=" + bandToText(requiredBandForBlack));
-    lines.add("% NEXT_BLANC=" + bandToText(requiredBandForWhite));
-    lines.add("% PLACED_NOIR=" + blackPlaced);
-    lines.add("% PLACED_BLANC=" + whitePlaced);
-    lines.add("% ABCDEF");
-
-    for (int row = 1; row <= SIZE; row++) {
-      String content = new String(board[row - 1]);
-      lines.add(String.format(Locale.ROOT, "%02d %s %02d", row, content, row));
-    }
-
-    lines.add("% ABCDEF");
-
-    Path path = Path.of(fileName);
-    try {
-      if (path.getParent() != null) {
-        Files.createDirectories(path.getParent());
+    try (PrintWriter pw = new PrintWriter(new FileWriter(fileName))) {
+      pw.println("% ABCDEF");
+      for (int r = 0; r < SIZE; r++) {
+        String rowNum = String.format("%02d", r + 1);
+        pw.println(rowNum + " " + new String(board[r]) + " " + rowNum); // board positions
       }
-      Files.write(path, lines, StandardCharsets.UTF_8);
+      pw.println("% ABCDEF");
     } catch (IOException e) {
-      throw new IllegalArgumentException("Unable to save board file: " + fileName, e);
+      e.printStackTrace();
     }
   }
 
-
-
-
-
-  /**
-   * Indique si le coup est valide pour le joueur sur le plateau courant.
-   */
+  // =========== Validation ===========
   public boolean isValidMove(String move, String player) {
-    PlayerColor playerColor = parsePlayer(player);
-    if (playerColor == null || move == null || move.trim().isEmpty()) {
-      return false;
+    if (gameOver()) return false;
+    PlayerColor pc = parsePlayer(player);
+    if (pc == null || move == null) return false;
+    move = move.trim();
+
+    // Pass move
+    if (move.equals("E")) {
+      if (!isPlacementDone()) return false;
+      String[] pm = possiblesMoves(player);
+      return pm.length == 1 && pm[0].equals("E");
     }
 
-    String normalizedMove = move.trim();
-
-    if ("E".equalsIgnoreCase(normalizedMove)) {
-      if (!isPlaced(playerColor) || gameOver()) {
-        return false;
-      }
-      return generateRegularMoves(playerColor).isEmpty();
+    // Initial placement: "C6/A6/B5/D5/E6/F5"
+    if (move.contains("/")) {
+      return isValidPlacement(move, pc);
     }
 
-    if (normalizedMove.contains("/")) {
-      return isValidPlacementMove(normalizedMove, playerColor);
+    // Normal move: "B1-D1"
+    if (move.contains("-")) {
+      return isValidNormalMove(move, pc);
     }
 
-    return isValidRegularMove(normalizedMove, playerColor);
+    return false;
   }
 
-  /**
-   * Calcule les coups possibles pour le joueur donne.
-   */
-  public String[] possiblesMoves(String player) {
-    PlayerColor playerColor = parsePlayer(player);
-    if (playerColor == null || gameOver() || !isPlaced(playerColor)) {
-      return new String[0];
-    }
-
-    List<String> moves = generateRegularMoves(playerColor);
-    if (moves.isEmpty()) {
-      return new String[] { "E" };
-    }
-    return moves.toArray(String[]::new);
-  }
-
-  /**
-   * Modifie le plateau en jouant le coup move pour le joueur donne.
-   */
-  public void play(String move, String player) {
-    if (!isValidMove(move, player)) {
-      throw new IllegalArgumentException("Invalid move '" + move + "' for player '" + player + "'");
-    }
-
-    PlayerColor playerColor = parsePlayer(player);
-    String normalizedMove = move.trim();
-
-    if ("E".equalsIgnoreCase(normalizedMove)) {
-      setRequiredBand(opponentOf(playerColor), FREE_BAND);
-      return;
-    }
-
-    if (normalizedMove.contains("/")) {
-      applyPlacementMove(normalizedMove, playerColor);
-      return;
-    }
-
-    Matcher matcher = REGULAR_MOVE_PATTERN.matcher(normalizedMove);
-    matcher.matches();
-
-    Position from = requireCoordinate(matcher.group(1));
-    Position to = requireCoordinate(matcher.group(2));
-
-    char movingPiece = board[from.row][from.col];
-    board[from.row][from.col] = EMPTY;
-    board[to.row][to.col] = movingPiece;
-
-    setRequiredBand(opponentOf(playerColor), bandAt(to));
-  }
-
-  /**
-   * Vrai lorsque le plateau correspond a une fin de partie.
-   */
-  public boolean gameOver() {
-    if (!blackPlaced || !whitePlaced) {
-      return false;
-    }
-    return !containsPiece(BLACK_UNICORN) || !containsPiece(WHITE_UNICORN);
-  }
-
-  /**
-   * Utility method useful for tests and demos.
-   */
-  public int getRequiredBand(String player) {
-    PlayerColor playerColor = parsePlayer(player);
-    if (playerColor == null) {
-      throw new IllegalArgumentException("Unknown player: " + player);
-    }
-    return requiredBandFor(playerColor);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("  ABCDEF\n");
-    for (int row = SIZE; row >= 1; row--) {
-      sb.append(row);
-      sb.append(' ');
-      for (int col = 0; col < SIZE; col++) {
-        sb.append(board[row - 1][col]);
-      }
-      sb.append(' ');
-      sb.append(row);
-      sb.append('\n');
-    }
-    sb.append("  ABCDEF\n");
-    sb.append("next noir=").append(bandToText(requiredBandForBlack));
-    sb.append(", next blanc=").append(bandToText(requiredBandForWhite));
-    return sb.toString();
-  }
-
-
-
-
-
-
-  public static void main(String[] args) {
-    try {
-      Path startFile = resolveExamplePath("start_standard.txt");
-      Path midgameFile = resolveExamplePath("midgame_req.txt");
-      Path saveTarget = resolveExamplePath("demo_saved_position.txt");
-
-      EscampeBoard board = new EscampeBoard();
-      board.setFromFile(startFile.toString());
-      System.out.println("=== Loaded starting board ===");
-      System.out.println(board);
-      String[] whiteMoves = board.possiblesMoves("blanc");
-      int previewCount = Math.min(8, whiteMoves.length);
-      System.out.println("Sample white moves: " + Arrays.toString(Arrays.copyOf(whiteMoves, previewCount)));
-
-      EscampeBoard placementDemo = new EscampeBoard();
-      String blackPlacement = "C6/A6/B5/D5/E6/F5";
-      String whitePlacement = "C1/A3/C2/C5/F1/F4";
-      System.out.println("\n=== Placement demo ===");
-      System.out.println("Black placement valid? " + placementDemo.isValidMove(blackPlacement, "noir"));
-      placementDemo.play(blackPlacement, "noir");
-      System.out.println("White placement valid? " + placementDemo.isValidMove(whitePlacement, "blanc"));
-      placementDemo.play(whitePlacement, "blanc");
-      placementDemo.saveToFile(saveTarget.toString());
-      System.out.println("Saved placed board to: " + saveTarget);
-
-      EscampeBoard tactical = new EscampeBoard();
-      tactical.setFromFile(midgameFile.toString());
-      System.out.println("\n=== Tactical scenario from requirement ===");
-      System.out.println(tactical);
-      System.out.println("C2-C1 valid for white now? " + tactical.isValidMove("C2-C1", "blanc"));
-      System.out.println("F6-E5 valid for white now? " + tactical.isValidMove("F6-E5", "blanc"));
-      tactical.play("F6-E5", "blanc");
-      System.out.println("A1-A2 valid for black now? " + tactical.isValidMove("A1-A2", "noir"));
-      tactical.play("A1-A2", "noir");
-      System.out.println("C2-C1 valid for white now? " + tactical.isValidMove("C2-C1", "blanc"));
-      tactical.play("C2-C1", "blanc");
-      System.out.println("Game over after capture? " + tactical.gameOver());
-    } catch (RuntimeException e) {
-      System.err.println("EscampeBoard demo failed: " + e.getMessage());
-      e.printStackTrace(System.err);
-    }
-  }
-
-  private void clearBoard() {
-    for (int row = 0; row < SIZE; row++) {
-      Arrays.fill(board[row], EMPTY);
-    }
-  }
-
-  private Integer parseBandMetadata(String comment, String key) {
-    String prefix = key + "=";
-    if (!comment.regionMatches(true, 0, prefix, 0, prefix.length())) {
-      return null;
-    }
-
-    String value = comment.substring(prefix.length()).trim();
-    if (value.equalsIgnoreCase("ANY") || value.equalsIgnoreCase("LIBRE") || value.equals("*")) {
-      return FREE_BAND;
-    }
-
-    try {
-      int parsed = Integer.parseInt(value);
-      if (parsed >= 1 && parsed <= 3) {
-        return parsed;
-      }
-    } catch (NumberFormatException ignored) {
-      return null;
-    }
-    return null;
-  }
-
-  private Boolean parseBooleanMetadata(String comment, String key) {
-    String prefix = key + "=";
-    if (!comment.regionMatches(true, 0, prefix, 0, prefix.length())) {
-      return null;
-    }
-
-    String value = comment.substring(prefix.length()).trim();
-    if (value.equalsIgnoreCase("true")) {
-      return Boolean.TRUE;
-    }
-    if (value.equalsIgnoreCase("false")) {
-      return Boolean.FALSE;
-    }
-    return null;
-  }
-
-  private void validatePieceCounts() {
-    int blackUnicornCount = countPiece(BLACK_UNICORN);
-    int whiteUnicornCount = countPiece(WHITE_UNICORN);
-    int blackPaladinCount = countPiece(BLACK_PALADIN);
-    int whitePaladinCount = countPiece(WHITE_PALADIN);
-
-    if (blackUnicornCount > 1 || whiteUnicornCount > 1) {
-      throw new IllegalArgumentException("A board cannot contain more than one unicorn per side");
-    }
-    if (blackPaladinCount > 5 || whitePaladinCount > 5) {
-      throw new IllegalArgumentException("A board cannot contain more than five paladins per side");
-    }
-  }
-
-  private int countPiece(char piece) {
-    int count = 0;
-    for (int row = 0; row < SIZE; row++) {
-      for (int col = 0; col < SIZE; col++) {
-        if (board[row][col] == piece) {
-          count++;
-        }
-      }
-    }
-    return count;
-  }
-
-  private boolean isValidPlacementMove(String move, PlayerColor playerColor) {
-    if (isPlaced(playerColor) || gameOver()) {
-      return false;
-    }
-
-    String[] tokens = move.split("/");
-    if (tokens.length != 6) {
-      return false;
-    }
-
-    Set<Position> used = new HashSet<>();
-    for (String token : tokens) {
-      Position position = parseCoordinate(token.trim());
-      if (position == null || board[position.row][position.col] != EMPTY || !used.add(position)) {
-        return false;
-      }
+  private boolean isValidPlacement(String move, PlayerColor pc) {
+    // Can't place if already placed or white didn't place before black
+    if (pc == PlayerColor.WHITE && whitePlaced) return false;
+    if (pc == PlayerColor.BLACK && blackPlaced) return false;
+    if (pc == PlayerColor.WHITE && blackPlaced) return false;
+    if (pc == PlayerColor.BLACK && !whitePlaced) return false;
+    
+    String[] parts = move.split("/");
+    if (parts.length != 6) return false;
+    
+    int[][] coords = new int[SIZE][2];
+    Set<String> seen = new HashSet<>();
+    for (int i = 0; i < SIZE; i++) {
+      coords[i] = parseCell(parts[i]);
+      if (coords[i] == null) return false;
+      int r = coords[i][0];
+      int c = coords[i][1];
+      if (!seen.add(r + "," + c)) return false; // duplicate
+      if (board[r][c] != '-') return false; // occupied
+      // White places on rows 01-02 (indices 0-1), Black on rows 05-06 (indices 4-5)
+      if (pc == PlayerColor.WHITE && r > 1) return false;
+      if (pc == PlayerColor.BLACK && r < 4) return false;
     }
     return true;
   }
 
-  private void applyPlacementMove(String move, PlayerColor playerColor) {
-    String[] tokens = move.split("/");
-    Position unicornPosition = requireCoordinate(tokens[0].trim());
-    board[unicornPosition.row][unicornPosition.col] = (playerColor == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
-    for (int i = 1; i < tokens.length; i++) {
-      Position paladinPosition = requireCoordinate(tokens[i].trim());
-      board[paladinPosition.row][paladinPosition.col] = (playerColor == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
+  private boolean isValidNormalMove(String move, PlayerColor pc) {
+    if (!isPlacementDone()) return false;
+    String[] parts = move.split("-");
+    if (parts.length != 2) return false; // must be exactly one '-' to fit "from-to" format
+
+    int[] from = parseCell(parts[0]);
+    int[] to = parseCell(parts[1]);
+    if (from == null || to == null) return false;
+
+    // from row/col, to row/col
+    int fr = from[0];
+    int  fc = from[1];
+    int  tr = to[0];
+    int  tc = to[1];
+    if (fr == tr && fc == tc) return false;
+
+    char piece = board[fr][fc];
+    if (!belongsTo(piece, pc)) return false;
+
+    // Liseret constraint: if opponent just moved, the piece we move must start
+    // from a cell whose liseret matches the opponent's destination liseret
+    if (lastMoveRow >= 0) {
+      int requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
+      if (LISERET[fr][fc] != requiredLiseret) return false;
     }
 
-    if (playerColor == PlayerColor.BLACK) {
-      blackPlaced = true;
+    // Destination must be empty or enemy piece (capture, only for unicorn target by reaching it)
+    char target = board[tr][tc];
+    if (target != '-' && belongsTo(target, pc)) return false;
+    // Only unicorn can be captured (landing on enemy unicorn)
+    if (target != '-' && !isUnicorn(target)) return false;
+
+    int dist = LISERET[fr][fc];
+    return canReach(fr, fc, tr, tc, dist, piece);
+  }
+
+  // BFS/DFS: can we reach (tr,tc) from (fr,fc) in exactly `dist` orthogonal steps,
+  // without revisiting cells, without jumping over pieces (path must be clear except destination)
+  private boolean canReach(int fr, int fc, int tr, int tc, int dist, char piece) {
+    // Temporarily remove the moving piece so it doesn't block its own path
+    char saved = board[fr][fc];
+    board[fr][fc] = '-';
+    boolean result = dfsReach(fr, fc, tr, tc, dist, new boolean[SIZE][SIZE], piece);
+    board[fr][fc] = saved;
+    return result;
+  }
+
+  private boolean dfsReach(int r, int c, int tr, int tc, int steps, boolean[][] visited, char piece) {
+    if (steps == 0) return r == tr && c == tc;
+    visited[r][c] = true;
+    for (int d = 0; d < DIRECTIONS.length; d++) {
+      int nr = r + DIRECTIONS[d][0];
+      int nc = c + DIRECTIONS[d][1];
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+      if (visited[nr][nc]) continue;
+      // Intermediate cells must be empty; destination can be empty or enemy unicorn
+      if (steps > 1 && board[nr][nc] != EMPTY) continue;
+      // Can only land on enemy unicorn and can't jump pieces
+      if (steps == 1 && board[nr][nc] != '-' && (!isUnicorn(board[nr][nc]) || sameColor(board[nr][nc], piece))) continue;
+      
+      if (dfsReach(nr, nc, tr, tc, steps - 1, visited, piece)) {
+        visited[r][c] = false;
+        return true;
+      }
+    }
+    visited[r][c] = false;
+    return false;
+  }
+
+  // =========== Possible moves ===========
+  public String[] possiblesMoves(String player) {
+    if (gameOver()) return new String[0];
+    PlayerColor pc = parsePlayer(player);
+    if (pc == null) return new String[0];
+
+    // Placement phase
+    if (!isPlacementDone()) {
+      if (pc == PlayerColor.WHITE && !whitePlaced) return generatePlacements(pc, 0, 1);
+      if (pc == PlayerColor.BLACK && !blackPlaced && whitePlaced) return generatePlacements(pc, 4, 5);
+      return new String[0];
+    }
+
+    // Normal move phase
+    List<String> moves = new ArrayList<>();
+    List<int[]> pieces = getPlayerPieces(pc);
+
+    // Determine required liseret (from opponent's last move)
+    int requiredLiseret = -1;
+    if (lastMoveRow >= 0) {
+      requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
+    }
+
+    // Filter pieces that can move (liseret constraint)
+    List<int[]> movable = new ArrayList<>();
+    if (requiredLiseret < 0) {
+      movable.addAll(pieces); // no constraint, all pieces can move
     } else {
-      whitePlaced = true;
-    }
-  }
-
-  private boolean isValidRegularMove(String move, PlayerColor playerColor) {
-    if (!isPlaced(playerColor) || gameOver()) {
-      return false;
-    }
-
-    Matcher matcher = REGULAR_MOVE_PATTERN.matcher(move);
-    if (!matcher.matches()) {
-      return false;
-    }
-
-    Position from = parseCoordinate(matcher.group(1));
-    Position to = parseCoordinate(matcher.group(2));
-    if (from == null || to == null || from.equals(to)) {
-      return false;
-    }
-
-    char movingPiece = board[from.row][from.col];
-    if (!isPlayersPiece(movingPiece, playerColor)) {
-      return false;
-    }
-
-    int requiredBand = requiredBandFor(playerColor);
-    if (requiredBand != FREE_BAND && bandAt(from) != requiredBand) {
-      return false;
-    }
-
-    char destination = board[to.row][to.col];
-    if (isPlayersPiece(destination, playerColor)) {
-      return false;
-    }
-
-    boolean captureAllowed = isOpponentUnicorn(destination, playerColor) && isPaladin(movingPiece);
-    if (destination != EMPTY && !captureAllowed) {
-      return false;
-    }
-
-    return canReachWithExactSteps(from, to, bandAt(from), captureAllowed);
-  }
-
-  private List<String> generateRegularMoves(PlayerColor playerColor) {
-    Set<String> moves = new TreeSet<>();
-    int requiredBand = requiredBandFor(playerColor);
-
-    for (int row = 0; row < SIZE; row++) {
-      for (int col = 0; col < SIZE; col++) {
-        char piece = board[row][col];
-        if (!isPlayersPiece(piece, playerColor)) {
-          continue;
-        }
-
-        Position from = new Position(row, col);
-        if (requiredBand != FREE_BAND && bandAt(from) != requiredBand) {
-          continue;
-        }
-
-        Set<Position> targets = collectReachableTargets(from, bandAt(from), piece, playerColor);
-        for (Position target : targets) {
-          moves.add(formatCoordinate(from) + "-" + formatCoordinate(target));
+      for (int[] p : pieces) {
+        if (LISERET[p[0]][p[1]] == requiredLiseret) {
+          movable.add(p);
         }
       }
     }
 
-    return new ArrayList<>(moves);
-  }
-
-  private Set<Position> collectReachableTargets(Position from, int steps, char movingPiece, PlayerColor playerColor) {
-    Set<Position> targets = new HashSet<>();
-    Set<Position> visited = new HashSet<>();
-    visited.add(from);
-    dfsCollectTargets(from, from, steps, movingPiece, playerColor, visited, targets);
-    return targets;
-  }
-
-  private void dfsCollectTargets(Position origin, Position current, int remainingSteps, char movingPiece, PlayerColor playerColor,
-      Set<Position> visited, Set<Position> targets) {
-    if (remainingSteps == 0) {
-      if (!current.equals(origin)) {
-        targets.add(current);
-      }
-      return;
-    }
-
-    for (int[] direction : DIRECTIONS) {
-      Position next = new Position(current.row + direction[0], current.col + direction[1]);
-      if (!isInBounds(next) || visited.contains(next)) {
-        continue;
-      }
-
-      char occupant = board[next.row][next.col];
-      boolean isLastStep = remainingSteps == 1;
-
-      if (!isLastStep) {
-        if (occupant != EMPTY) {
-          continue;
-        }
-      } else {
-        if (occupant != EMPTY) {
-          boolean captureAllowed = isOpponentUnicorn(occupant, playerColor) && isPaladin(movingPiece);
-          if (!captureAllowed) {
-            continue;
+    for (int[] p : movable) {
+      int fr = p[0];
+      int fc = p[1];
+      char piece = board[fr][fc];
+      int dist = LISERET[fr][fc];
+      // Try all destination cells, retaining only those that are empty or occupied by an enemy unicorn, and reachable in `dist` steps
+      for (int tr = 0; tr < 6; tr++) {
+        for (int tc = 0; tc < 6; tc++) {
+          if (tr == fr && tc == fc) continue;
+          char target = board[tr][tc];
+          if (target != EMPTY && belongsTo(target, pc)) continue;
+          if (target != EMPTY && !isUnicorn(target)) continue;
+          if (canReach(fr, fc, tr, tc, dist, piece)) {
+            moves.add(cellToString(fr, fc) + "-" + cellToString(tr, tc));
           }
         }
       }
-
-      visited.add(next);
-      dfsCollectTargets(origin, next, remainingSteps - 1, movingPiece, playerColor, visited, targets);
-      visited.remove(next);
-    }
-  }
-
-  private boolean canReachWithExactSteps(Position from, Position to, int steps, boolean captureAllowed) {
-    Set<Position> visited = new HashSet<>();
-    visited.add(from);
-    return dfsReach(from, to, steps, captureAllowed, visited);
-  }
-
-  private boolean dfsReach(Position current, Position target, int remainingSteps, boolean captureAllowed,
-      Set<Position> visited) {
-    if (remainingSteps == 0) {
-      return current.equals(target);
     }
 
-    for (int[] direction : DIRECTIONS) {
-      Position next = new Position(current.row + direction[0], current.col + direction[1]);
-      if (!isInBounds(next) || visited.contains(next)) {
-        continue;
+    if (moves.isEmpty()) {
+      moves.add("E");
+    }
+    return moves.toArray(new String[0]);
+  }
+
+  //TODO is this really usefull ??
+  private String[] generatePlacements(PlayerColor pc, int minRow, int maxRow) {
+    // Collect available cells in the player's two rows
+    List<int[]> cells = new ArrayList<>();
+    for (int r = minRow; r <= maxRow; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        if (board[r][c] == EMPTY) cells.add(new int[]{r, c});
       }
+    }
+    if (cells.size() < 6) return new String[0];
 
-      boolean isTarget = next.equals(target);
-      char occupant = board[next.row][next.col];
+    // Generate all C(n,6) combinations, first cell = unicorn, rest = paladins
+    List<String> result = new ArrayList<>();
+    int n = cells.size();
+    int[] indices = new int[6];
+    generateCombinations(cells, indices, 0, 0, n, result);
+    return result.toArray(new String[0]);
+  }
 
-      if (!isTarget) {
-        if (occupant != EMPTY) {
-          continue;
+  private void generateCombinations(List<int[]> cells, int[] indices, int start, int depth, int n, List<String> result) {
+    if (depth == 6) {
+      // indices[0] = unicorn position, indices[1..5] = paladin positions
+      // But any of the 6 could be the unicorn - actually the format is:
+      // first cell is unicorn, remaining 5 are paladins
+      // We need to try each of the 6 chosen cells as the unicorn
+      for (int u = 0; u < SIZE; u++) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(cellToString(cells.get(indices[u])[0], cells.get(indices[u])[1]));
+        for (int j = 0; j < SIZE; j++) {
+          if (j == u) continue;
+          sb.append('/').append(cellToString(cells.get(indices[j])[0], cells.get(indices[j])[1]));
         }
+        result.add(sb.toString());
+      }
+      return;
+    }
+    for (int i = start; i < n; i++) {
+      indices[depth] = i;
+      generateCombinations(cells, indices, i + 1, depth + 1, n, result);
+    }
+  }
+
+  // =========== Play ===========
+  public void play(String move, String player) {
+    PlayerColor pc = parsePlayer(player);
+    if (pc == null) return;
+    move = move.trim();
+
+    // Pass - no board change, but don't reset lastMove since the opponent didn't actually move to a new cell (the constraint resets)
+    if (move.equals("E")) {
+      lastMoveRow = -1;
+      lastMoveCol = -1;
+      return;
+    }
+
+    // Initial placement
+    if (move.contains("/")) {
+      String[] parts = move.split("/");
+      char unicorn = (pc == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
+      char paladin = (pc == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
+      int[] uc = parseCell(parts[0]);
+      if (uc != null) {
+        board[uc[0]][uc[1]] = unicorn;
+        for (int i = 1; i < parts.length; i++) {
+          int[] cell = parseCell(parts[i]);
+          if (cell != null) {
+            board[cell[0]][cell[1]] = paladin;
+          }
+        }
+        if (pc == PlayerColor.WHITE) whitePlaced = true;
+        else blackPlaced = true;
       } else {
-        if (remainingSteps != 1) {
-          continue;
-        }
-        if (occupant != EMPTY && !captureAllowed) {
-          continue;
-        }
+        // TODO Invalid placement format, do nothing
+        System.out.println("Invalid placement format: " + move);
       }
-
-      visited.add(next);
-      if (dfsReach(next, target, remainingSteps - 1, captureAllowed, visited)) {
-        return true;
-      }
-      visited.remove(next);
+      lastMoveRow = -1;
+      lastMoveCol = -1;
+      return;
     }
 
-    return false;
+    // Normal move
+    String[] parts = move.split("-");
+    int[] from = parseCell(parts[0]);
+    int[] to = parseCell(parts[1]);
+    if (from != null && to != null) {
+      board[to[0]][to[1]] = board[from[0]][from[1]];
+      board[from[0]][from[1]] = EMPTY;
+      lastMoveRow = to[0];
+      lastMoveCol = to[1];
+    } else {
+      // TODO Invalid move format, do nothing
+      System.out.println("Invalid move format: " + move);
+    }
   }
 
-  private PlayerColor parsePlayer(String player) {
-    if (player == null) {
-      return null;
+  // =========== Game Over ===========
+  public boolean gameOver() {
+    if (!isPlacementDone()) return false;
+    boolean whiteUnicorn = false;
+    boolean blackUnicorn = false;
+    for (int r = 0; r < SIZE; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        if (board[r][c] == WHITE_UNICORN) whiteUnicorn = true;
+        if (board[r][c] == BLACK_UNICORN) blackUnicorn = true;
+      }
     }
+    return !whiteUnicorn || !blackUnicorn;
+  }
 
+  // =========== Utils ===========
+  private PlayerColor parsePlayer(String player) {
+    if (player == null) return null;
     String normalized = player.trim().toLowerCase(Locale.ROOT);
-    if (normalized.equals("noir") || normalized.equals("black")) {
-      return PlayerColor.BLACK;
-    }
-    if (normalized.equals("blanc") || normalized.equals("white")) {
-      return PlayerColor.WHITE;
-    }
+    if (normalized.equals("noir") || normalized.equals("black")) return PlayerColor.BLACK;
+    if (normalized.equals("blanc") || normalized.equals("white")) return PlayerColor.WHITE;
     return null;
   }
 
-  private Position parseCoordinate(String coordinate) {
-    if (coordinate == null) {
-      return null;
-    }
-
-    Matcher matcher = COORD_PATTERN.matcher(coordinate.trim());
-    if (!matcher.matches()) {
-      return null;
-    }
-
-    int col = Character.toUpperCase(matcher.group(1).charAt(0)) - 'A';
-    int row = matcher.group(2).charAt(0) - '1';
-    return new Position(row, col);
+  private int[] parseCell(String cell) {
+    if (cell == null || cell.length() != 2) return null;
+    int col = cell.charAt(0) - 'A';
+    int row = cell.charAt(1) - '1';
+    if (col < 0 || col >= SIZE || row < 0 || row >= SIZE) return null;
+    return new int[]{row, col};
   }
 
-  private Position requireCoordinate(String coordinate) {
-    Position position = parseCoordinate(coordinate);
-    if (position == null) {
-      throw new IllegalArgumentException("Invalid coordinate: " + coordinate);
-    }
-    return position;
+  private String cellToString(int row, int col) {
+    return "" + (char)('A' + col) + (char)('1' + row);
   }
 
-  private String formatCoordinate(Position position) {
-    char file = (char) ('A' + position.col);
-    char rank = (char) ('1' + position.row);
-    return "" + file + rank;
-  }
-
-  private int bandAt(Position position) {
-    return BAND_MAP[position.row][position.col];
-  }
-
-  private boolean isInBounds(Position position) {
-    return position.row >= 0 && position.row < SIZE && position.col >= 0 && position.col < SIZE;
-  }
-
-  private boolean isPlaced(PlayerColor color) {
-    return color == PlayerColor.BLACK ? blackPlaced : whitePlaced;
-  }
-
-  private boolean hasAnyPiece(PlayerColor color) {
-    for (int row = 0; row < SIZE; row++) {
-      for (int col = 0; col < SIZE; col++) {
-        if (isPlayersPiece(board[row][col], color)) {
-          return true;
-        }
-      }
-    }
+  private boolean belongsTo(char piece, PlayerColor pc) {
+    if (pc == PlayerColor.WHITE) return piece == WHITE_UNICORN || piece == WHITE_PALADIN;
+    if (pc == PlayerColor.BLACK) return piece == BLACK_UNICORN || piece == BLACK_PALADIN;
     return false;
   }
 
-  private int requiredBandFor(PlayerColor color) {
-    return color == PlayerColor.BLACK ? requiredBandForBlack : requiredBandForWhite;
+  private boolean isUnicorn(char piece) {
+    return piece == WHITE_UNICORN || piece == BLACK_UNICORN;
   }
 
-  private void setRequiredBand(PlayerColor color, int band) {
-    if (color == PlayerColor.BLACK) {
-      requiredBandForBlack = band;
-    } else {
-      requiredBandForWhite = band;
-    }
+  private boolean sameColor(char a, char b) {
+    boolean aWhite = (a == WHITE_UNICORN || a == WHITE_PALADIN);
+    boolean bWhite = (b == WHITE_UNICORN || b == WHITE_PALADIN);
+    return aWhite == bWhite;
   }
 
-  private boolean isPlayersPiece(char piece, PlayerColor color) {
-    if (color == PlayerColor.BLACK) {
-      return piece == BLACK_UNICORN || piece == BLACK_PALADIN;
-    }
-    return piece == WHITE_UNICORN || piece == WHITE_PALADIN;
+  private boolean isPlacementDone() {
+    return whitePlaced && blackPlaced;
   }
 
-  private boolean isOpponentUnicorn(char piece, PlayerColor color) {
-    return (color == PlayerColor.BLACK) ? piece == WHITE_UNICORN : piece == BLACK_UNICORN;
-  }
-
-  private boolean isPaladin(char piece) {
-    return piece == BLACK_PALADIN || piece == WHITE_PALADIN;
-  }
-
-  private boolean containsPiece(char piece) {
-    for (int row = 0; row < SIZE; row++) {
-      for (int col = 0; col < SIZE; col++) {
-        if (board[row][col] == piece) {
-          return true;
-        }
-      }
-    }
+  private boolean hasPieces(PlayerColor pc) {
+    for (int r = 0; r < SIZE; r++)
+      for (int c = 0; c < SIZE; c++)
+        if (belongsTo(board[r][c], pc)) return true;
     return false;
   }
 
-  private String bandToText(int band) {
-    return (band == FREE_BAND) ? "ANY" : Integer.toString(band);
+  private List<int[]> getPlayerPieces(PlayerColor pc) {
+    List<int[]> pieces = new ArrayList<>();
+    for (int r = 0; r < SIZE; r++)
+      for (int c = 0; c < SIZE; c++)
+        if (belongsTo(board[r][c], pc)) pieces.add(new int[]{r, c});
+    return pieces;
   }
 
-  private PlayerColor opponentOf(PlayerColor color) {
-    return color == PlayerColor.BLACK ? PlayerColor.WHITE : PlayerColor.BLACK;
-  }
+  // =========== Main ===========
+  public static void main(String[] args) {
+    EscampeBoard b = new EscampeBoard();
 
-  private static Path resolveExamplePath(String fileName) {
-    List<Path> candidates = List.of(
-        Path.of("examples", fileName),
-        Path.of("escampe", "examples", fileName));
+    // 1. Initial placement
+    System.out.println("=== Placement phase ===");
+    String whitePlace = "C1/A1/B2/D2/E1/F2";
+    System.out.println("White placement valid: " + b.isValidMove(whitePlace, "blanc"));
+    b.play(whitePlace, "blanc");
 
-    for (Path candidate : candidates) {
-      if (Files.exists(candidate)) {
-        return candidate;
-      }
+    String blackPlace = "C6/A6/B5/D5/E6/F5";
+    System.out.println("Black placement valid: " + b.isValidMove(blackPlace, "noir"));
+    b.play(blackPlace, "noir");
+
+    b.saveToFile("test_board.txt");
+    System.out.println("Board saved.");
+
+    // 2. Normal moves
+    System.out.println("\n=== Normal moves ===");
+    String[] whiteMoves = b.possiblesMoves("blanc");
+    System.out.println("White possible moves: " + whiteMoves.length);
+    for (String m : whiteMoves) System.out.println("  " + m);
+
+    if (whiteMoves.length > 0) {
+      String mv = whiteMoves[0];
+      System.out.println("Playing: " + mv);
+      b.play(mv, "blanc");
     }
-    return candidates.get(0);
+
+    System.out.println("Game over: " + b.gameOver());
+
+    // 3. File I/O round-trip
+    System.out.println("\n=== File I/O ===");
+    b.saveToFile("escampe\\examples\\test_board.txt");
+    EscampeBoard b2 = new EscampeBoard();
+    b2.setFromFile("escampe\\examples\\test_board2.txt");
+    System.out.println("Loaded board, game over: " + b2.gameOver());
   }
 }
