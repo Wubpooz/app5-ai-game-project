@@ -31,10 +31,13 @@ public class EscampeBoard {
     { 0, -1 }
   };
 
-  // e.g. "01 nnN--- 01"
-  private static final Pattern BOARD_LINE    = Pattern.compile("^(\\d{2})\\s([NnBb-]{6})\\s\\d{2}$");
-  // e.g. "% lastMove: D4"
-  private static final Pattern LAST_MOVE_CMT = Pattern.compile("^%\\s*lastMove:\\s*([A-F][1-6])$");
+  // Numbered line – leading number required, trailing optional, flexible whitespace:
+  //   "01 nnN--- 01", "1 nnN---", "01  nnN---  06", "01\tnnN---"
+  private static final Pattern BOARD_LINE_NUM  = Pattern.compile("^(\\d{1,2})\\s+([NnBb-]{6})(?:\\s+\\d{1,2})?$");
+  // Bare line – just the 6 board characters, no numbers: "nnN---"
+  private static final Pattern BOARD_LINE_BARE = Pattern.compile("^([NnBb-]{6})$");
+  // e.g. "% lastMove: D4" – column letter case-insensitive
+  private static final Pattern LAST_MOVE_CMT   = Pattern.compile("^%\\s*lastMove:\\s*([A-Fa-f][1-6])$");
 
   // Board: board[row][col], row 0 = line 01 (bottom), col 0 = A
   // '-' = empty, 'B'/'b' = white unicorn/paladin, 'N'/'n' = black unicorn/paladin
@@ -71,14 +74,23 @@ public class EscampeBoard {
           continue;
         }
         if (line.startsWith("%")) continue;
-        // Format: "01 nnN--- 01"
-        Matcher m = BOARD_LINE.matcher(line);
-        if (!m.matches()) continue;
-        int fileRow = Integer.parseInt(m.group(1)) - 1; // 1-based in file -> 0-based
-        if (fileRow < 0 || fileRow >= SIZE) continue;
-        String boardPart = m.group(2);
-        for (int c = 0; c < SIZE; c++) board[fileRow][c] = boardPart.charAt(c);
-        rowIdx++;
+        // Numbered line: "01 nnN--- 01", "1 nnN---", extra spaces OK
+        Matcher m = BOARD_LINE_NUM.matcher(line);
+        if (m.matches()) {
+          int fileRow = Integer.parseInt(m.group(1)) - 1; // 1-based in file -> 0-based
+          if (fileRow < 0 || fileRow >= SIZE) continue;
+          String boardPart = m.group(2);
+          for (int c = 0; c < SIZE; c++) board[fileRow][c] = boardPart.charAt(c);
+          rowIdx++;
+          continue;
+        }
+        // Bare line: "nnN---" (no row numbers) – use sequential counter
+        Matcher mb = BOARD_LINE_BARE.matcher(line);
+        if (mb.matches() && rowIdx < SIZE) {
+          String boardPart = mb.group(1);
+          for (int c = 0; c < SIZE; c++) board[rowIdx][c] = boardPart.charAt(c);
+          rowIdx++;
+        }
       }
       // Infer placement state from board content
       whitePlaced = hasPieces(PlayerColor.WHITE);
@@ -461,7 +473,12 @@ public class EscampeBoard {
   }
 
   // =========== Main ===========
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
+    testFileFormats();
+    testGameLogic();
+  }
+
+  private static void testGameLogic() {
     // ---- Test 1: placement validation ----
     System.out.println("=== Test 1: Placement ===");
     EscampeBoard b = new EscampeBoard();
@@ -477,7 +494,7 @@ public class EscampeBoard {
 
     // ---- Test 2: file round-trip (save then reload) ----
     System.out.println("\n=== Test 2: File round-trip ===");
-    String tmpFile = System.getProperty("java.io.tmpdir") + "/escampe_test.txt";
+    String tmpFile = System.getProperty("java.io.tmpdir") + File.separator + "escampe_test.txt";
     b.play("C1-D1", "blanc"); // white moves, sets lastMove to D1 (liseret 3)
     b.saveToFile(tmpFile);
     System.out.println("Saved to: " + tmpFile);
@@ -518,4 +535,100 @@ public class EscampeBoard {
     System.out.println("E valid:                              " + b4.isValidMove("E", "blanc"));
     System.out.println("B1-C1 rejected (liseret 2 != 3):     " + !b4.isValidMove("B1-C1", "blanc")); // true
   }
+  /** Tests that setFromFile handles all reasonable file formats */
+  private static void testFileFormats() throws Exception {
+    String tmp = System.getProperty("java.io.tmpdir") + File.separator;
+
+    // Format 1: standard "01 nnN--- 01"
+    writeFile(tmp + "f1.txt",
+        "% ABCDEF",
+        "01 b-B-b- 01",
+        "02 -b-b-- 02",
+        "03 ------ 03",
+        "04 ------ 04",
+        "05 -n-n-- 05",
+        "06 n-N-n- 06",
+        "% ABCDEF");
+
+    // Format 2: no trailing row number "01 nnN---"
+    writeFile(tmp + "f2.txt",
+        "% ABCDEF",
+        "01 b-B-b-",
+        "02 -b-b--",
+        "03 ------",
+        "04 ------",
+        "05 -n-n--",
+        "06 n-N-n-",
+        "% ABCDEF");
+
+    // Format 3: single-digit row numbers "1 nnN--- 1"
+    writeFile(tmp + "f3.txt",
+        "1 b-B-b- 1",
+        "2 -b-b-- 2",
+        "3 ------ 3",
+        "4 ------ 4",
+        "5 -n-n-- 5",
+        "6 n-N-n- 6");
+
+    // Format 4: bare lines, no numbers, many comments
+    writeFile(tmp + "f4.txt",
+        "% Game saved by player A",
+        "% Date: 2026-05-09",
+        "% Turn 12",
+        "b-B-b-",
+        "-b-b--",
+        "------",
+        "------",
+        "-n-n--",
+        "n-N-n-",
+        "% end of board");
+
+    // Format 5: extra spaces between fields
+    writeFile(tmp + "f5.txt",
+        "01  b-B-b-  01",
+        "02  -b-b--  02",
+        "03  ------  03",
+        "04  ------  04",
+        "05  -n-n--  05",
+        "06  n-N-n-  06");
+
+    // Format 6: lowercase column in lastMove comment
+    writeFile(tmp + "f6.txt",
+        "01 b-B-b- 01",
+        "02 -b-b-- 02",
+        "03 ------ 03",
+        "04 ------ 04",
+        "05 -n-n-- 05",
+        "06 n-N-n- 06",
+        "% lastMove: d4");   // lowercase
+
+    System.out.println("=== File format robustness ===");
+    String[] labels = {"standard", "no trailing num", "single-digit rows",
+                        "bare+many comments", "extra spaces", "lowercase lastMove"};
+    String[] files  = {tmp+"f1.txt", tmp+"f2.txt", tmp+"f3.txt",
+                        tmp+"f4.txt", tmp+"f5.txt", tmp+"f6.txt"};
+    boolean[] expectLastMove = {false, false, false, false, false, true};
+
+    boolean allOk = true;
+    for (int i = 0; i < files.length; i++) {
+      EscampeBoard b = new EscampeBoard();
+      b.setFromFile(files[i]);
+      boolean hasWhite = b.hasPieces(PlayerColor.WHITE);
+      boolean hasBlack = b.hasPieces(PlayerColor.BLACK);
+      boolean lastMoveOk = !expectLastMove[i] || (b.lastMoveRow == 3 && b.lastMoveCol == 3); // D4
+      boolean ok = hasWhite && hasBlack && lastMoveOk;
+      allOk &= ok;
+      System.out.printf("  %-22s white=%-5b black=%-5b lastMoveOk=%-5b -> %s%n",
+          labels[i], hasWhite, hasBlack, lastMoveOk, ok ? "OK" : "FAIL");
+    }
+    System.out.println(allOk ? "All formats OK" : "SOME FORMATS FAILED");
+  }
+
+  private static void writeFile(String path, String... lines) throws Exception {
+    try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter(path))) {
+      for (String l : lines) pw.println(l);
+    }
+  }
+
+
 }
