@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
-public class EscampeBoard {
+public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor, EscampeBoard> {
 
   private static final int SIZE = 6;
 
@@ -118,16 +118,70 @@ public class EscampeBoard {
   }
 
   // =========== Validation ===========
+  @Override
+  public ArrayList<EscampeMove> possibleMoves(PlayerColor playerRole) {
+    String[] moves = possiblesMoves(playerRole);
+    ArrayList<EscampeMove> result = new ArrayList<>();
+    for (String m : moves) {
+      result.add(new EscampeMove(m));
+    }
+    return result;
+  }
+
+  @Override
+  public EscampeBoard play(EscampeMove move, PlayerColor playerRole) {
+    play(move.getMove(), playerRole);
+    return this;
+  }
+
+  @Override
+  public boolean isValidMove(EscampeMove move, PlayerColor playerRole) {
+    return isValidMove(move.getMove(), playerRole);
+  }
+
+  @Override
+  public boolean isGameOver() {
+    return gameOver();
+  }
+
+  @Override
+  public ArrayList<Score<PlayerColor>> getScores() {
+    ArrayList<Score<PlayerColor>> scores = new ArrayList<>();
+    boolean whiteUnicorn = false;
+    boolean blackUnicorn = false;
+    for (int r = 0; r < SIZE; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        if (board[r][c] == WHITE_UNICORN) whiteUnicorn = true;
+        if (board[r][c] == BLACK_UNICORN) blackUnicorn = true;
+      }
+    }
+    
+    if (!whiteUnicorn) {
+      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.LOOSE, 0));
+      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.WIN, 1));
+    } else if (!blackUnicorn) {
+      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.WIN, 1));
+      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.LOOSE, 0));
+    } else {
+      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.TIE, 0));
+      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.TIE, 0));
+    }
+    return scores;
+  }
+
   public boolean isValidMove(String move, String player) {
+    return isValidMove(move, parsePlayer(player));
+  }
+
+  public boolean isValidMove(String move, PlayerColor pc) {
     if (gameOver()) return false;
-    PlayerColor pc = parsePlayer(player);
     if (pc == null || move == null) return false;
     move = move.trim();
 
     // Pass move
     if (move.equals("E")) {
       if (!isPlacementDone()) return false;
-      String[] pm = possiblesMoves(player);
+      String[] pm = possiblesMoves(pc);
       return pm.length == 1 && pm[0].equals("E");
     }
 
@@ -240,8 +294,11 @@ public class EscampeBoard {
 
   // =========== Possible moves ===========
   public String[] possiblesMoves(String player) {
+    return possiblesMoves(parsePlayer(player));
+  }
+
+  public String[] possiblesMoves(PlayerColor pc) {
     if (gameOver()) return new String[0];
-    PlayerColor pc = parsePlayer(player);
     if (pc == null) return new String[0];
 
     // Placement phase
@@ -342,7 +399,10 @@ public class EscampeBoard {
 
   // =========== Play ===========
   public void play(String move, String player) {
-    PlayerColor pc = parsePlayer(player);
+    play(move, parsePlayer(player));
+  }
+
+  public void play(String move, PlayerColor pc) {
     if (pc == null) return;
     move = move.trim();
 

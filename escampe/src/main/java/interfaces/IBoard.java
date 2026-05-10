@@ -9,11 +9,10 @@ import game.Score;
  * 
  * @param <Move> Class implementing the moves for the game
  * @param <Role> Class implementing the roles for the game
- * @param <Board> Class implementing the boards for the game
  * 
  * 
  */
-public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> {
+public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M, R, B>> {
 
 	/**
 	 * returns the possible moves a player having the playerRole	

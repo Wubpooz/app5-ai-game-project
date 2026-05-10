@@ -1,5 +1,5 @@
 package game;
 
-public enum PlayerColor {
+public enum PlayerColor implements interfaces.IRole {
   BLACK, WHITE
 }

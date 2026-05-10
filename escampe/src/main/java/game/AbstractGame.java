@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 import interfaces.IBoard;
 import interfaces.IMove;
 import interfaces.IRole;
-import game.Score;
 
 public abstract class AbstractGame<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> {
 
