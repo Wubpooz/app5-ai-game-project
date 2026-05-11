@@ -14,6 +14,7 @@
     - [5. Quels sont les critères que vous envisagez de prendre en compte pour concevoir des heuristiques d'estimation de configuration de jeu (donner au moins 3 critères) ?](#5-quels-sont-les-critères-que-vous-envisagez-de-prendre-en-compte-pour-concevoir-des-heuristiques-destimation-de-configuration-de-jeu-donner-au-moins-3-critères-)
     - [6. Est-il souhaitable pour ce jeu d'adopter une stratégie particulière en début, milieu ou fin de partie ?](#6-est-il-souhaitable-pour-ce-jeu-dadopter-une-stratégie-particulière-en-début-milieu-ou-fin-de-partie-)
     - [7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.](#7-donnez-un-majorant-du-nombre-de-coups-dans-une-partie-détaillez-les-techniques-que-vous-comptez-mettre-en-oeuvre-pour-respecter-une-contrainte-de-temps-imposée-sur-la-durée-totale-dune-partie)
+  - [Versioning plan](#versioning-plan)
   - [References](#references)
 
 ---
@@ -162,6 +163,26 @@ Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 &nbsp;  
 
 
+
+
+## Versioning plan
+- Model versions: Use semantic experiment IDs like `v0.1-inputs`, `v0.2-loss`, `v0.3-bootstrap1`, `v0.4-se`, `v0.5-dwconv`, `v0.6-q8`, `v0.7-distilled`. A simple naming convention could be:  
+  - `banddper-v0.1-base`
+  - `banddper-v0.2-extra-channels`
+  - `banddper-v0.3-weighted-loss`
+  - `banddper-v0.4-bootstrap-round1`
+  - `banddper-v0.5-se`
+  - `banddper-v0.6-dwconv`
+  - `banddper-v0.7-int8`
+  - `banddper-v0.8-distilled`
+- Checkpoints: Save `model.pt`, `config.json`, `metrics.json`, `train_manifest.json` together
+- Paper versions: Match paper revision to architecture revision, e.g. `paper-r3` corresponding to `model-v0.4`
+- Changelog: Maintain a short changelog with architecture changes, training data changes, and benchmark changes
+
+
+---
+
+&nbsp;  
 ## References
 - [Escampe Game Rules](http://jeuxstrategieter.free.fr/Escampe_complet.php)
 - [Mana (2nd version de Escampe)](https://fr.wikipedia.org/wiki/Mana_(jeu))

@@ -1,26 +1,45 @@
 # TODO
+## General
+- [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
+- [ ] setup releases, versionning and update docs with links and ELO testing:
+    Sequential Probability Ratio Test (SPRT) for engine evaluation:
+    https://tests.stockfishchess.org/tests/view/696a9e83cec152c6220c1d1d :
+    60000 games - master vs e0bfc4b69bbe928d6f474a46560bcc3b3f6709aa diff finished
+    Elo: 55.03 ± 1.4 (95%) LOS: 100.0%
+    Total: 60000 W: 18810 L: 9386 D: 31804
+    Ptnml(0-2): 48, 3203, 14470, 11835, 444
+    nElo: 112.79 ± 3.0 (95%) PairsRatio: 3.78
+    Stats
+    chi^2	234.30
+    dof	178
+    p-value	0.30%
+
+
 ## Search
 - [ ] Minimax with alpha-beta pruning
 
 - [ ] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
 
-- [ ] Iterative deepening: start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
+- [ ] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
+  - [ ] [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows): when doing iterative deepening, instead of starting each deeper search with alpha=-inf and beta=+inf, we can start with a narrow window around the previous iteration's score (e.g., alpha=prev_score-50, beta=prev_score+50). This can lead to faster cutoffs if the score doesn't change much between iterations. If the search fails low or high, we can widen the window and re-search. Be careful with the choice of window size to balance between speed and the risk of re-searching.
 
 - [ ] Repetition detection using the transposition table: if we encounter the same board position again, we can detect a draw by repetition.
 
-- [ ] Move ordering
+- [ ] [Move ordering](https://www.chessprogramming.org/Move_Ordering)
   - [ ] TT move first
   - [ ] Captures and immediate tactial mpves sorted by MVV/LVA (most valuable victim/least valuable attacker)
   - [ ] History heuristic: moves that have caused beta cutoffs in the past are tried earlier.
   - [ ] Killer moves: moves that caused cutoffs at the same depth in other branches are tried earlier.
   - [ ] Remaining moves
 
-- [ ] Selective pruning
-  - [ ] Null-move pruning (not the pass move, only for regular moves): assume that if we skip our turn, the opponent will get a chance to move. If the opponent's best response is still worse than our current best score, we can prune this branch.
-  - [ ] Late Move Reduction: if we are deep in the search and we have already found a good move, we can reduce the depth of search for less promising moves (e.g., non-captures, non-checks) to save time.
-  - [ ] Futility pruning: if we are near the end of the search and the current position is already much worse than our best score, we can prune this branch since it's unlikely to improve.
+- [ ] [Selective pruning](https://www.chessprogramming.org/Selectivity)
+  - [ ] [Null-move pruning](https://www.chessprogramming.org/Null_Move_Pruning) (not the pass move, only for regular moves): assume that if we skip our turn, the opponent will get a chance to move. If the opponent's best response is still worse than our current best score, we can prune this branch.
+  - [ ] [Late Move Reduction](https://www.chessprogramming.org/Late_Move_Reduction): if we are deep in the search and we have already found a good move, we can reduce the depth of search for less promising moves (e.g., non-captures, non-checks) to save time.
+  - [ ] [Futility pruning](https://www.chessprogramming.org/Futility_Pruning): if we are near the end of the search and the current position is already much worse than our best score, we can prune this branch since it's unlikely to improve.
 
-- [ ] Quiescence search: extend search in "noisy" positions (captures, checks) to avoid horizon effect.
+- [ ] [Quiescence search](https://www.chessprogramming.org/Quiescence_Search): extend search in "noisy" positions (captures, checks) to avoid horizon effect.
+
+- [ ] [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic): keep track of the best moves that caused beta cutoffs at each depth and try them first in future searches at the same depth.
 
 ## Heuristics
 - [ ] Evaluation function: $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
@@ -29,6 +48,8 @@
   - $\mathcal{BC}$: landing on a 1-band square is bad for the opponent, landing on a 3-band square is good for the opponent. Low bands are good when ahead, high bands are good when behind.
   - $\mathcal{T}$: penality when few legal moves for us, reward when few legal moves for opponent.
   - Unicorn escapability: number of legal moves for the unicorn of the opponent in 1-2 moves.
+
+- [ ] Game phases ?
 
 - [ ] Time management: 
   - Spend more time in complex midgame positions (high branching factor, many legal moves).
@@ -77,14 +98,14 @@
   - [ ] Sort moves in place using partial selection sort to find the best move without fully sorting the list.
   - [ ] Partial selection sort: only sort the top N moves (e.g., 4) instead of the entire move list, since we only care about the best move for alpha-beta pruning.
 
-- [ ] Zobrist Hashing + Transposition Table: assign a random 64-bit integer to each piece type and board square. The hash of the board is the XOR of the values for all pieces on the board. When we make a move, we can update the hash by XORing out the piece from its old square and XORing in the piece at its new square. Store evaluated positions in a transposition table (hash map) keyed by the Zobrist hash to avoid redundant calculations.
+- [ ] Zobrist Hashing + [Transposition Table](https://www.chessprogramming.org/Transposition_Table): assign a random 64-bit integer to each piece type and board square. The hash of the board is the XOR of the values for all pieces on the board. When we make a move, we can update the hash by XORing out the piece from its old square and XORing in the piece at its new square. Store evaluated positions in a transposition table (hash map) keyed by the Zobrist hash to avoid redundant calculations.
   - store hash, depth, node type (exact, lower bound, upper bound), score, best move
 
 - [ ] Optional threading (lazy SMP): start multiple search threads with the same root position but different random seeds for move ordering. Each thread shares the transposition table, so they can benefit from each other's work. When time runs out, return the best move found by any thread.
 
-- [ ] Bitboard board representation: represent the board using bitboards (64-bit integers, `long`) for each piece type and player. This allows for very fast move generation and board evaluation using bitwise operations.
+- [ ] Bitboard board representation: represent the board using bitboards (64-bit integers, `long`) for each piece type and player. This allows for very fast move generation and board evaluation using bitwise operations. (https://www.chessprogramming.org/Bitboards & https://www.chessprogramming.org/0x88)
   - `Long.bitCount(bitboard)` to count pieces, `Long.numberOfTrailingZeros(bitboard)` to find the index of the least significant piece, etc.
-- [ ] Principal Variation Search (PVS / NegaScout): an optimization of alpha-beta that assumes the first move is the best and searches it with a full window, while subsequent moves are searched with a null window (alpha, alpha+1). If a move fails high, we re-search it with a full window.
+- [ ] [Principal variation search](https://www.chessprogramming.org/Principal_Variation_Search) (PVS / NegaScout): an optimization of alpha-beta that assumes the first move is the best and searches it with a full window, while subsequent moves are searched with a null window (alpha, alpha+1). If a move fails high, we re-search it with a full window.
 
 - [ ] (Optional) Openning book
   - Cover all three band types with your paladins => if all your pieces are on band-2 squares, opponent landing on band-1 forces you to pass immediately.
@@ -120,6 +141,8 @@
       "C1/A1/F1/B2/E2/D2", // Symmetric (paladins mirrored around center, unicorn on double)
     };
     ```
+- [ ] (Optional) Endgame tablebases: precompute perfect play for all positions with a small number of pieces (e.g., unicorn + 1 paladin vs unicorn) and store the results in a database. During the game, if we reach a position that is in the tablebase, we can play the perfect move instantly.
+
 
 ## Bonus
 - [ ] Study the impact of each heuristic components
