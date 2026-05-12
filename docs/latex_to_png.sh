@@ -26,8 +26,21 @@ BASE="$(basename "$TEXFILE" .tex)"
 
 echo "Converting $TEXFILE to PNG image..."
 
-# Export the tex file in input to pdf in the same directory as the source file
-pdflatex -shell-escape -interaction=nonstopmode -output-directory "$DIR" "$TEXFILE"
+pushd "$DIR" > /dev/null || {
+    echo "Cannot change directory to $DIR"
+    exit 1
+}
+
+# Export the tex file in input to pdf in the source file directory
+pdflatex -shell-escape -interaction=nonstopmode "$BASE.tex"
+PDFLATEX_EXIT="$?"
+popd > /dev/null
+
+if [ "$PDFLATEX_EXIT" -ne 0 ]; then
+    echo
+    echo "pdflatex failed. Check the LaTeX source and try again."
+    exit 1
+fi
 
 # Convert the pdf to png using magick and keep output in the same directory
 if ! magick -density 500 "$DIR/$BASE.pdf" -quality 100 "$DIR/$BASE.png"; then

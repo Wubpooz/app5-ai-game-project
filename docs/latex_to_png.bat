@@ -29,8 +29,16 @@ set "BASENAME=%~n1"
 
 echo Converting %TEXFILE% to PNG image...
 
-pdflatex -shell-escape -interaction=nonstopmode -output-directory "%DIR%" "%TEXFILE%"
-IF ERRORLEVEL 1 (
+pushd "%DIR%" >nul 2>&1 || (
+    echo Failed to change directory to %DIR%
+    exit /b 1
+)
+
+pdflatex -shell-escape -interaction=nonstopmode "%BASENAME%.tex"
+set "PDFLATEX_EXIT=%ERRORLEVEL%"
+popd >nul 2>&1
+
+if not "%PDFLATEX_EXIT%"=="0" (
     echo pdflatex failed. Check the LaTeX source and try again.
     exit /b 1
 )
