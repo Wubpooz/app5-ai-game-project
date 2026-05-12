@@ -1,18 +1,21 @@
-bitboards
+// bitboards
 
-| Operation                   | Naive (array loops)     | Bitboard                                   |
-| --------------------------- | ----------------------- | ------------------------------------------ |
-| "Is square X occupied?"     | Array lookup + branch   | (bb >> x) & 1L — 1 instruction             |
-| "All my pieces"             | Loop over piece list    | Single long read                           |
-| "Legal moves from square X" | Loop + collision checks | Precomputed table lookup + AND/mask        |
-| "Count legal moves"         | Loop counter            | Long.bitCount(bb) — 1 instruction (POPCNT) |
-| "Iterate over all pieces"   | Loop over array         | Long.numberOfTrailingZeros loop            |
-| Move generation             | Nested loops            | Bitwise AND with precomputed ray tables    |
-| Position hashing (Zobrist)  | Loop over board         | XOR precomputed table per set bit          |
-| Transposition table key     | Full board copy         | XOR of piece bitboards                     |
+import java.util.ArrayList;
+import java.util.List;
+
+// | Operation                   | Naive (array loops)     | Bitboard                                   |
+// | --------------------------- | ----------------------- | ------------------------------------------ |
+// | "Is square X occupied?"     | Array lookup + branch   | (bb >> x) & 1L — 1 instruction             |
+// | "All my pieces"             | Loop over piece list    | Single long read                           |
+// | "Legal moves from square X" | Loop + collision checks | Precomputed table lookup + AND/mask        |
+// | "Count legal moves"         | Loop counter            | Long.bitCount(bb) — 1 instruction (POPCNT) |
+// | "Iterate over all pieces"   | Loop over array         | Long.numberOfTrailingZeros loop            |
+// | Move generation             | Nested loops            | Bitwise AND with precomputed ray tables    |
+// | Position hashing (Zobrist)  | Loop over board         | XOR precomputed table per set bit          |
+// | Transposition table key     | Full board copy         | XOR of piece bitboards                     |
 
 
-public class EscampeBitboard {
+class EscampeBitboard {
 
     // One bitboard per piece type per color
     long whitePaladins;   // 4 bits set

@@ -1,20 +1,4 @@
 # TODO
-## General
-- [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
-- [ ] setup releases, versionning and update docs with links and ELO testing:
-    Sequential Probability Ratio Test (SPRT) for engine evaluation:
-    https://tests.stockfishchess.org/tests/view/696a9e83cec152c6220c1d1d :
-    60000 games - master vs e0bfc4b69bbe928d6f474a46560bcc3b3f6709aa diff finished
-    Elo: 55.03 ± 1.4 (95%) LOS: 100.0%
-    Total: 60000 W: 18810 L: 9386 D: 31804
-    Ptnml(0-2): 48, 3203, 14470, 11835, 444
-    nElo: 112.79 ± 3.0 (95%) PairsRatio: 3.78
-    Stats
-    chi^2	234.30
-    dof	178
-    p-value	0.30%
-
-
 ## Search
 - [ ] Minimax with alpha-beta pruning
 
@@ -149,7 +133,19 @@
 - [ ] Study the impact of each optimization
 - [ ] Create levels of AI for each optimization
 - [ ] Elo rating for bots: update with $R_A' = R_A + K(S_A - E_A)$ where $E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$ and $K=32$, $S_A=1$ for win, $0.5$ for draw, $0$ for loss.
+    Sequential Probability Ratio Test (SPRT) for engine evaluation:
+    https://tests.stockfishchess.org/tests/view/696a9e83cec152c6220c1d1d :
+    60000 games - master vs e0bfc4b69bbe928d6f474a46560bcc3b3f6709aa diff finished
+    Elo: 55.03 ± 1.4 (95%) LOS: 100.0%
+    Total: 60000 W: 18810 L: 9386 D: 31804
+    Ptnml(0-2): 48, 3203, 14470, 11835, 444
+    nElo: 112.79 ± 3.0 (95%) PairsRatio: 3.78
+    Stats
+    chi^2	234.30
+    dof	178
+    p-value	0.30%
 - [ ] `-v` flag to print the board each turn else don't 
+- [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
 - [ ] Add a bar like in chess to see which side is winning
 - [ ] Mark moves as brilliant?  
 - [ ] Solo & Duo human play ?  
