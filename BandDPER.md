@@ -154,12 +154,6 @@ This also provides graceful degradation as, if a block learns to output zero (i.
 The output head uses a direct bypass for forced pass signals, inspired by [Stockfish's PSQT direct-to-output shortcut](https://github.com/official-stockfish/Stockfish/blob/master/src/nnue/nnue_architecture.h):
 ![Output Head](docs/output_head.png)
 
-<!-- TODO: update image -->
-```
-raw  = Linear(258→64) → ReLU → Linear(64→1)     # standard path
-out  = tanh(raw + w_pass × forced_pass)             # J shortcut added before tanh
-```
-
 `w_pass` is a single learned scalar parameter. Wiring the forced pass signal directly to the output bypasses the trunk entirely, giving this near-linear signal maximum gradient and preventing the trunk from having to learn to route it.
 
 This mirrors Stockfish HalfKAv2's `FullThreats` feature set, which is passed directly to the output layer for a similar reason - some signals have a nearly linear effect on evaluation, and the hidden layers add noise rather than value.
