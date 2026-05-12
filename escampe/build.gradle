@@ -25,6 +25,23 @@ tasks.withType(JavaCompile).configureEach {
     options.release.set(21)
 }
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'ranking.TournamentRunner'
+    }
+}
+
+// Create a fat (uber) JAR containing dependencies for easy distribution
+task fatJar(type: Jar) {
+    archiveBaseName = project.name + '-all'
+    archiveClassifier = ''
+    manifest {
+        attributes 'Main-Class': 'ranking.TournamentRunner'
+    }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
 repositories {
     mavenCentral()
 }

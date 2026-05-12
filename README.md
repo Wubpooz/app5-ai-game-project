@@ -179,6 +179,20 @@ Pour réduire le temps de calcul, on peut utiliser les techniques suivantes:
 - Paper versions: Match paper revision to architecture revision, e.g. `paper-r3` corresponding to `model-v0.4`
 - Changelog: Maintain a short changelog with architecture changes, training data changes, and benchmark changes
 
+## Releases
+
+We publish runnable releases as tagged versions. The repository includes a GitHub Actions workflow that builds a fat JAR for the `escampe` Java project and publishes it as a release asset whenever a tag matching `v*` is pushed.
+
+Quick steps to create a release:
+
+```bash
+# update CHANGELOG.md and commit
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+The workflow will run and attach the jar to the GitHub release.
+
 
 ---
 
