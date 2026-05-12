@@ -344,6 +344,8 @@ OrtSession session = env.createSession("escampe_net_q8.onnx");
 // ~1–2µs inference for 25K param INT8 model via ONNX Runtime
 ```
 
+To evaluate the quantization performance, we propose to compare the score predictions of the quantized model against the original float32 model on a large set of random board positions. We then compute the mean absolute error (MAE) and mean squared error (MSE) between the two sets of predictions with 95, 99, 99.99 confidence intervals (to check if edge cases don't get degraded). Additionally, we can run a small tournament of 1000 self-play games using both models as evaluation functions in the search, and compare their win rates to see if the quantization has a significant impact on playing strength.
+
 
 &nbsp;  
 ### Distillation
