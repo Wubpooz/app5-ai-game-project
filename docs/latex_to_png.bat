@@ -24,16 +24,18 @@ IF ERRORLEVEL 1 (
     exit /b 1
 )
 
+set "DIR=%~dp1"
+set "BASENAME=%~n1"
+
 echo Converting %TEXFILE% to PNG image...
 
-pdflatex -shell-escape -interaction=nonstopmode "%TEXFILE%"
+pdflatex -shell-escape -interaction=nonstopmode -output-directory "%DIR%" "%TEXFILE%"
 IF ERRORLEVEL 1 (
     echo pdflatex failed. Check the LaTeX source and try again.
     exit /b 1
 )
 
-set "BASENAME=%~n1"
-magick -density 500 "%BASENAME%.pdf" -quality 100 "%BASENAME%.png"
+magick -density 500 "%DIR%%BASENAME%.pdf" -quality 100 "%DIR%%BASENAME%.png"
 IF ERRORLEVEL 1 (
     echo.
     echo ImageMagick conversion failed. Ghostscript may be absent or the PDF delegate could not run.

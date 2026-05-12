@@ -15,19 +15,22 @@ then
 fi
 
 # Input handling
-if [ "$#" -ne 1 || ! -f "$1" ]; then
+if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
     echo "Usage: $0 <tex_file>"
     exit 1
 fi
 
-echo "Converting $1 to PNG image..."
+TEXFILE="$1"
+DIR="$(dirname "$TEXFILE")"
+BASE="$(basename "$TEXFILE" .tex)"
 
-echo "Converting $1 to $1.png..."
-# Export the tex file in input to pdf
-pdflatex -shell-escape -interaction=nonstopmode "$1"
+echo "Converting $TEXFILE to PNG image..."
 
-# Convert the pdf to png using magick
-if ! magick -density 500 "$(basename "$1" .tex).pdf" -quality 100 "$(basename "$1" .tex).png"; then
+# Export the tex file in input to pdf in the same directory as the source file
+pdflatex -shell-escape -interaction=nonstopmode -output-directory "$DIR" "$TEXFILE"
+
+# Convert the pdf to png using magick and keep output in the same directory
+if ! magick -density 500 "$DIR/$BASE.pdf" -quality 100 "$DIR/$BASE.png"; then
     echo
     echo "ImageMagick conversion failed. Ghostscript may be absent or the PDF delegate could not run."
     echo "Please install Ghostscript: winget install --id Ghostscript.Ghostscript -e or visit https://ghostscript.com/download.html"
