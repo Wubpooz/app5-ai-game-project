@@ -14,9 +14,11 @@ First, we can be certain that the evaluation function should return a scalar in 
 The function must capture several key signals:
 - Which pieces can legally move right now (band constraint)
 - How many moves each side has (mobility asymmetry)
-- Proximity of attackers to the opponent's unicorn, weighted by band alignment
-- Unicorn escape routes
+- Proximity of attackers to the opponent's unicorn, weighted by band alignment and measured in a unicorn-relative coordinate frame
+- Unicorn escape routes (counted explicitly as scalar signal)
 - Structural patterns (corridor control, band-type distribution)
+- Tempo forcing: which band the current move lands on determines the opponent's forced departure
+- Forced-pass detection: whether the current move leaves the opponent with no legal response
 
 
 ### Why a Neural Network
@@ -32,7 +34,7 @@ The main drawback is that it would be slower but according to [AlphaZero](https:
 |--------|-------------------------------------------------------------------------------------|-----------------------------------------------------|
 | MLP    | Fast                                                                                | No spatial awareness or relational reasoning, avoid |
 | CNN    | Exploits local spatial patterns and translation equivariance; fast enough           | Ok but overkill; translation equivariance may be wrong |
-| NNUE   | Fast incremental updates, dual-perspective design, ClippedReLU (-1 to 1) activation | Doesn't fit current problem size, but dual-perspective and ClippedReLU are interesting ideas to borrow |
+| NNUE   | Fast incremental updates, dual-perspective design, ClippedReLU (-1 to 1) activation | Doesn't fit current problem size, but dual-perspective, ClippedReLU, king-relative features, and direct output shortcuts are interesting ideas to borrow |
 | ResNet | Good if baseline evaluation exists                                                  | Good, but lacks inherent spatial awareness          |
 | GNN    | Movement graph; invariant to symmetries                                             | Avoid due to dynamic graph changes, complexity, and slower performance |
 
@@ -43,54 +45,79 @@ The main drawback is that it would be slower but according to [AlphaZero](https:
 ## Model Architecture
 This architecture blends known components into a novel evaluation network:
 - **Siamese CNN spatial encoder** with shared weights and dual-perspective input
-- **Asymmetric rook-aware kernels** (1×6 and 6×1) 
-<!-- TODO, NOT ROOK Like, just orthogonals, so L are possible -->
-- **Band topology encoded as fixed input channels**
+- **Band topology and game signals encoded as fixed and dynamic input channels** (16 channels total)
+- **Unicorn-relative attacker map** inspired by NNUE's HalfKP king-relative encoding
 - **Residual trunk** with ClippedReLU at the perspective boundary
+- **Scalar injection** of escape counts at the trunk boundary
+- **Direct output shortcut** for forced-pass signal, bypassing the trunk
 
 &nbsp;  
 Core design elements:
 - **Siamese Network**	(Shared-weight dual-perspective encoding, [Bromley et al. - 1993](https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html))
 - **ResNet** (CNN + residual blocks, [He et al. - 2015](https://arxiv.org/abs/1512.03385))
-- **Asymmetric convolutions** (Rook-aware ($1\times N$) + ($N\times 1$) kernels, [Szegedy et al. - 2016](https://arxiv.org/abs/1512.00567))
 - **Atrous convolution** (Dilated convolutions for range, [Chen et al. - 2015](https://arxiv.org/abs/1511.07122))
 - **ClippedReLU** bounded activations	([NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html))
 - **Dual accumulator** for game positions	([NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html))
+- **Unicorn-relative encoding** inspired by HalfKP king-relative features ([NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html))
+- **Direct output shortcut** for near-linear signals ([Stockfish HalfKAv2 PSQT bypass - 2021](https://github.com/official-stockfish/Stockfish/blob/master/src/nnue/nnue_architecture.h))
 - **Value head** (Value network for board games, [AlphaZero - 2017](https://arxiv.org/abs/1712.01815))
 
 &nbsp;  
 **Parameter Count**
-| Component                 | Parameters   |
-|---------------------------|--------------|
-| Encoder (shared, used ×2) | ~389,664     |
-| ResBlock ×3 (dim=256)     | ~393,216     |
-| Output head               | ~16,448      |
-| **Total**                 | **~799,328** |
+| Component                       | Parameters   |
+|---------------------------------|--------------|
+| Encoder (shared, used ×2)       | ~312,000     |
+| ResBlock ×3 (dim=258)           | ~402,648     |
+| Output head                     | ~16,577      |
+| **Total**                       | **~730,625** |
 
-This model would be around 3.2 MB in float32.
-We can devise a reduced variant with `embed_dim=64` and `num_res_blocks=2` which would have around **200K parameters** and negligible accuracy loss, given the small board size and limited piece interactions.
+
+This model would be around 2.9 MB in float32.  
+The reduced variant with `embed_dim=64`, `num_res_blocks=2` has around **185K parameters**.
 
 &nbsp;  
 ### Layers
 #### Input
-For each perspective we have a `[9, 6, 6]` tensor. For each board position, we have 9 channels:  
-| Channel | Content                              | Type          |
-|---------|--------------------------------------|---------------|
-| 0       | My paladin positions                 | Dynamic 0/1   |
-| 1       | My unicorn position                  | Dynamic 0/1   |
-| 2       | Opponent paladin positions           | Dynamic 0/1   |
-| 3       | Opponent unicorn position            | Dynamic 0/1   |
-| 4       | Band-1 square mask                   | **Fixed** 0/1 |
-| 5       | Band-2 square mask                   | **Fixed** 0/1 |
-| 6       | Band-3 square mask                   | **Fixed** 0/1 |
-| 7       | Departure constraint mask            | Dynamic 0/1   |
-| 8       | Legal landing squares (mobility map) | Dynamic 0/1   |
+For each perspective we have a `[16, 6, 6]` tensor. For each board position, we have 16 channels:
 
-*The Band masks are fixed binary inputs representing the spatial structure of the board.*
+| Channel | Content                                      | Type          |
+|---------|----------------------------------------------|---------------|
+| 0       | My paladin positions                         | Dynamic 0/1   |
+| 1       | My unicorn position                          | Dynamic 0/1   |
+| 2       | Opponent paladin positions                   | Dynamic 0/1   |
+| 3       | Opponent unicorn position                    | Dynamic 0/1   |
+| 4       | Band-1 square mask                           | **Fixed** 0/1 |
+| 5       | Band-2 square mask                           | **Fixed** 0/1 |
+| 6       | Band-3 square mask                           | **Fixed** 0/1 |
+| 7       | Departure constraint mask                    | Dynamic 0/1   |
+| 8       | Band-1 legal landing squares                 | Dynamic 0/1   |
+| 9       | Band-2 legal landing squares                 | Dynamic 0/1   |
+| 10      | Band-3 legal landing squares                 | Dynamic 0/1   |
+| 11      | My row occupancy fraction                    | Dynamic [0,1] |
+| 12      | Opponent row occupancy fraction              | Dynamic [0,1] |
+| 13      | My column occupancy fraction                 | Dynamic [0,1] |
+| 14      | Opponent column occupancy fraction           | Dynamic [0,1] |
+| 15      | Unicorn-relative opponent attacker map       | Dynamic 0/1   |
+
+*Band masks (ch. 4–6) are fixed binary inputs representing the board's spatial structure.*  
+*Channels 8–10 makes the tempo-forcing mechanic explicit.*  
+*Channel 15 places opponent paladins in a coordinate frame centered on our unicorn (anchor at row=2, col=2), inspired by HalfKP's king-relative encoding. This lets the CNN learn threat patterns that are translation-invariant relative to the unicorn.*
 
 This encodes the full current board state.  
 The CNN will learn the spatial correlations between pieces and band types.  
-Having two perspectives allows us to follow the **Siamese network principle**, where the same encoder processes both perspectives with shared weights, enabling the network to learn a unified representation of the game state from both players' viewpoints. Indeed, a position that is good for one player is bad for the other (menacing the unicorn is universally bad), so the network can learn to extract features that are relevant for both sides without needing separate encoders.
+Having two perspectives allows us to follow the **Siamese network principle**, where the same encoder processes both perspectives with shared weights, enabling the network to learn a unified representation of the game state from both players' viewpoints. Indeed, a position that is good for one player is bad for the other (menacing the unicorn is universally bad), so the network can learn to extract features that are relevant for both sides without needing separate encoders.  
+
+
+In addition, **3 scalars are injected** outside the CNN:
+| Scalar       | Content                                   | Injection point       |
+|--------------|-------------------------------------------|-----------------------|
+| `escape_me`  | Legal move count for my unicorn (0–16)    | Concatenated into `h` |
+| `escape_opp` | Legal move count for opponent unicorn     | Concatenated into `h` |
+| `forced_pass`| 1 if opponent has no legal reply          | Direct output bypass  |
+
+The escape counts are appended to `h` after Siamese fusion.  
+The forced-pass bit bypasses the trunk entirely as a learned additive weight on the output scalar.  
+
 
 &nbsp;  
 #### Shared Spatial Encoder
@@ -98,13 +125,12 @@ Having two perspectives allows us to follow the **Siamese network principle**, w
 With $B$ the batch size.  
 
 **Notes**:  
-- The first convolution captures **local spatial patterns** and piece interactions, which are crucial for evaluating immediate threats and opportunities. It's receptive field of 3×3 allows it to see adjacent pieces and band types.
-- The second convolution with dilation **expands the receptive field** (of 5×5) to capture longer-range interactions, such as potential rook movements and band constraints up to 2 steps.
-- **Asymmetric Kernels**: The $1\times 6$ and $6\times 1$ convolutions are designed to capture the rook-like movement patterns and corridor control in a single pass and encode a global spatial feature that a small $3\times 3$ CNN kernel doesn't capture.
+- The first convolution captures **local spatial patterns** and piece interactions, which are crucial for evaluating immediate threats and opportunities. Its receptive field of 3×3 allows it to see adjacent pieces and band types. Importantly, broken-path movement of band=2 pieces reaches exactly the diagonal neighbours captured by this 3×3 kernel - so this convolution is now the primary movement-range detector.
+- The second convolution with dilation=2 **expands the receptive field** (effective 5×5) to capture medium-range interactions such as L shaped movement patterns and corridor control.
 - **BatchNorm**: Applied after each convolution to stabilize training and accelerate convergence.
 - **ClippedReLU**: Used in the encoder output to ensure all values are in the range `[0,1]`, preventing one perspective from dominating the other due to scale differences.
-- **Dual-Perspective Fusion**: The outputs from both perspectives are concatenated to form a unified representation `h` of shape `[B, 256]`, ensuring the network can leverage information from both players' viewpoints. Always pass the inputs in the order `[current_player, opponent]`, mapped to `[white, black]`, so the network consistently evaluates the state from the current player's perspective.
-- Both perspectives are processed through the same encoder (shared weights) to learn a unified representation of the game state, enabling the network to generalize patterns that are relevant for both players (Siamese network principle).
+- **Dual-Perspective Fusion**: The outputs from both perspectives are concatenated to form a unified representation `h` of shape `[B, 256]`, then escape counts are appended giving `h` shape `[B, 258]`. Always pass inputs in the order `[current_player, opponent]`.  
+  Both perspectives are processed through the same encoder (shared weights) to learn a unified representation of the game state, enabling the network to generalize patterns that are relevant for both players (Siamese network principle).  
 
 &nbsp;  
 #### Residual Trunk
@@ -113,22 +139,32 @@ There is a trunk of 3 ResBlocks with skip connections. Each ResBlock consists of
 
 A residual block computes an output $y$ as the sum of its input $x$ and a learned function $F(x)$: $y = F(x) + x$. The function $F$ is typically a small neural network (e.g., two linear layers with an activation in between). This structure allows the block to learn a residual function (essentially a correction to its input) rather than needing to learn a full transformation from scratch.  
 Additionally, the skip connection (the "$+ x$" part) allows gradients to flow directly through the block during backpropagation, which helps mitigate the vanishing gradient problem and enables training of deeper networks.  
-This also provides graceful degradation as, if a block learns to output zero (i.e., $F(x) \approx 0$), it effectively becomes an identity function, allowing the network to skip it without harming performance. This means that adding more ResBlocks doesn't risk making the evaluation worse, so we can experiment with depth without worrying about training instability.
+This also provides graceful degradation as, if a block learns to output zero (i.e., $F(x) \approx 0$), it effectively becomes an identity function, allowing the network to skip it without harming performance.
 
+**Input dimension**: 258 (256 Siamese CNN output + 2 escape scalars).
 
 **Notes**:
-- **Why residual blocks**: The network learns *corrections* on top of a near-correct base representation. This is the right structure when training via minimax bootstrapping (the base eval is already reasonable, the network fixes its mistakes). Skip connections also prevent vanishing gradients with depth. Also, their graceful degradation property means that adding more blocks doesn't risk making the evaluation worse, so we can experiment with depth without worrying about training instability.
-- **Why 3 ResBlocks**: Maps exactly to Escampe's three natural abstraction levels (proximity < band interaction < tempo/forced-pass dynamics). It also matches empirical optimum from board game literature ([AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387), [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6)) at this parameter scale. A smaller block count wouldn't capture the full complexity of this game and goign to three blocks is worth the additionnal cost. Adding a fourth would increase the risk of overfitting given our training data size and the model capacity (we go from a `5:1` ratio to a `10:1` ratio which increases the risk significantly), and the marginal inference cost would be significant at 60K nodes per search (it would add $2 \times 256^2$ FLOPs per node so $7.9$ GFLOPs in total). Also, with ClippedReLU, more than 3 blocks would lead to training instability as the gradient path through the skip connections becomes dominant and the F(x) branch receives progressively weaker gradients. Meaning wise, after 3 levels of composition, further blocks learn redundant representations since the positional complexity is fundamentally bounded by the board size and piece interactions. This is confirmed by the graceful degradation property.
-- **Why ClippedReLU in ResBlocks**: Keeps activations bounded at every depth, preventing value explosion through the skip connections.
-
+- **Why residual blocks**: The network learns *corrections* on top of a near-correct base representation. This is the right structure when training via minimax bootstrapping. Skip connections prevent vanishing gradients with depth.
+- **Why 3 ResBlocks**: Maps to Escampe's three natural abstraction levels (proximity/unicorn-relative < band interaction/tempo < forced-pass/escape dynamics). Matches empirical optimum from board game literature at this parameter scale ([AlphaZero](https://en.wikipedia.org/wiki/AlphaZero), [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387), [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6)). A smaller block count wouldn't capture the full complexity of this game and goign to three blocks is worth the additionnal cost. Also, with ClippedReLU, more than 3 blocks would lead to training instability as the gradient path through the skip connections becomes dominant and the F(x) branch receives progressively weaker gradients. Meaning wise, after 3 levels of composition, further blocks learn redundant representations since the positional complexity is fundamentally bounded by the board size and piece interactions.
+- **Why ClippedReLU in ResBlocks**: Keeps activations bounded at every depth, preventing value explosion through skip connections.
+- **Scalar injection at trunk input**: Escape counts are global signals that do not have a natural spatial representation. Injecting them at `h` (after the CNN, before the trunk) lets the ResBlocks learn to combine spatial features with game-state scalars. The trunk's Linear(258→258) layer learns the projection automatically.
 
 &nbsp;  
 #### Output Head
-The output head is classical:  
+The output head uses a direct bypass for forced pass signals, inspired by [Stockfish's PSQT direct-to-output shortcut](https://github.com/official-stockfish/Stockfish/blob/master/src/nnue/nnue_architecture.h):
 ![Output Head](docs/output_head.png)
 
-No need for ClippedReLU here since Tanh already bounds the final output. The output is a scalar representing the evaluation of the position from the current player's perspective.
+<!-- TODO: update image -->
+```
+raw  = Linear(258→64) → ReLU → Linear(64→1)     # standard path
+out  = tanh(raw + w_pass × forced_pass)             # J shortcut added before tanh
+```
 
+`w_pass` is a single learned scalar parameter. Wiring the forced pass signal directly to the output bypasses the trunk entirely, giving this near-linear signal maximum gradient and preventing the trunk from having to learn to route it.
+
+This mirrors Stockfish HalfKAv2's `FullThreats` feature set, which is passed directly to the output layer for a similar reason - some signals have a nearly linear effect on evaluation, and the hidden layers add noise rather than value.
+
+No ClippedReLU on the output since Tanh already bounds the final value. The output is a scalar representing the evaluation from the current player's perspective.
 
 ---
 
@@ -138,9 +174,11 @@ No need for ClippedReLU here since Tanh already bounds the final output. The out
 We use the **existing alpha-beta engine** at depth 4–6 to label positions with "ground truth" scores. The network learns to approximate deep search evaluations.  
 Precisely, for each position sampled from self-play games, we run a minimax search to get the score and use it as the training label: `score_label = minimax(board, depth=5) / MATE_SCORE` (normalized to `[-1,1]`).  
 This is a form of supervised learning where the target labels are generated by a stronger search algorithm.  
-We aim at around 50K–100K labeled positions, which is sufficient for the network to learn meaningful patterns without overfitting. This can be generated in a reasonable time frame (1–2 hours) on a desktop CPU.  
+We aim at around 50K–100K labeled positions, which is sufficient for the network to learn meaningful patterns without overfitting.
 
-Alternatively, we could use **TD-learning** where the network learns from its own predictions at the next state so it doesn't need explicit labels. However, this is more complex to implement and may require careful tuning of the learning rate and exploration strategy to ensure stable training despite the continuous training process advantage. Minimax bootstrapping is more straightforward and effective for our purposes.  
+**Note on the band constraint and forced pass signals**: Both require knowing the last move's landing band, not just the board position. Ensure training examples store `(board_state, last_landing_band, label)` triples, not just `(board_state, label)`. Forced-pass positions are rare (~2–5% of positions); the direct shortcut ensures they receive strong gradient despite low frequency.
+
+Alternatively, we could use **TD-learning** but minimax bootstrapping is more straightforward and effective for our purposes.
 
 
 ### Loss Function
@@ -149,16 +187,13 @@ We use **Mean Squared Error** (MSE) loss between the network's predicted score a
 loss = F.mse_loss(prediction, target)
 ```
 
-Additionally, we could include an auxiliary loss to predict the "tension" (number of attackers) which is a key signal in the game, but this is optional and may not be necessary if the main loss is sufficient for learning. It would also complicate the training pipeline since we would need to compute tension labels for each position.
-
 
 ### Optimizer and Training Hyperparameters
-We use **AdamW** (`lr=1e-3`, `weight_decay=1e-4`) with **Cosine Annealing with Warm Restarts** to escape plateaus during iterative bootstrapping rounds since each round is essentially a new curriculum. We also apply **gradient clipping** (`clip_grad_norm_=1.0`) to prevent exploding gradients, especially with ClippedReLU activations. If we want aggressive fast training, we could consider using **OneCycleLR**, which ramps up the learning rate and then decays sharply, often converging in half the epochs. However, AdamW with cosine annealing is a solid and well-understood choice that should work well for this problem.
+We use **AdamW** (`lr=1e-3`, `weight_decay=1e-4`) with **Cosine Annealing with Warm Restarts** to escape plateaus during iterative bootstrapping rounds. We also apply **gradient clipping** (`clip_grad_norm_=1.0`) to prevent exploding gradients.
 
 
 ### Training Hardware
-We used a GTX 1080 GPU for training, which is more than sufficient for this model size and dataset. Training should take around 30 minutes to 1 hour depending on the number of epochs and batch size.  
-We installed CUDA then used the appropriate PyTorch wheels for CUDA 11.8, which is the maximum supported version for GTX 1080.
+We used a GTX 1080 GPU for training, which is more than sufficient for this model size and dataset.  
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
@@ -173,17 +208,18 @@ def fold_batchnorm(w, b, bn_mean, bn_var, bn_gamma, bn_beta, eps=1e-5):
 
 model = fold_all_batchnorms(model)
 
-# 2. Export all weights to JSON
+# 2. Export all weights to JSON (include w_pass and new band masks)
 weights = {k: v.tolist() for k,v in model.state_dict().items()}
-weights["band1_mask"] = BAND1_MASK.tolist()  # fixed channels
+weights["band1_mask"] = BAND1_MASK.tolist()
 weights["band2_mask"] = BAND2_MASK.tolist()
 weights["band3_mask"] = BAND3_MASK.tolist()
+weights["w_forced_pass"] = model.w_forced_pass.item()  # w_pass weight
 json.dump(weights, open("escampe_net_weights.json","w"))
 
-# 3. Save .pth for resuming training / HuggingFace upload
+# 3. Save .pth for resuming training
 torch.save(model.state_dict(), "escampe_net.pth")
 
-# 4. Push to HuggingFace (versioning/backup)
+# 4. Push to HuggingFace
 api.upload_file("escampe_net.pth",
                 path_in_repo="escampe_net.pth",
                 repo_id="mathieu-waharte/escampe-eval")
@@ -198,18 +234,23 @@ api.upload_file("escampe_net.pth",
 We load the weights once at startup, then run forward pass manually:
 ```java
 // Pre-allocate all activation buffers (no GC pressure in hot path)
-float[][][] convBuf1, convBuf2, rowBuf, colBuf;
+float[][][] convBuf1, convBuf2;
 float[]     encBuf, wEmbed, bEmbed, trunk, h1, outBuf;
+float       wForcedPass;   // w_pass: loaded once at startup
 
-public float evaluate(EscampeBoard board) {
-  float[][][] xMe  = boardToTensor(board, board.currentPlayer());
-  float[][][] xOpp = boardToTensor(board, board.opponent());
+public float evaluate(EscampeBoard board, int lastLandingBand) {
+  float[][][] xMe  = boardToTensor(board, board.currentPlayer(), lastLandingBand);
+  float[][][] xOpp = boardToTensor(board, board.opponent(),      lastLandingBand);
 
   float[] w = encode(xMe);   // [128], ClippedReLU output
-  float[] b = encode(xOpp);  // [128], ClippedReLU output
+  float[] b = encode(xOpp);  // [128]
 
-  // Concatenate → [256]
-  float[] h = concat(w, b);
+  // Scalar signals: escape counts, normalized to [0,1]
+  float escapeMe  = computeUnicornEscapeCount(board, board.currentPlayer()) / 16.0f;
+  float escapeOpp = computeUnicornEscapeCount(board, board.opponent())      / 16.0f;
+
+  // Concatenate perspectives + escape scalars [258]
+  float[] h = concat(w, b, new float[]{escapeMe, escapeOpp});
 
   // ResBlocks
   for (ResBlockWeights rb : resBlocks) {
@@ -217,10 +258,15 @@ public float evaluate(EscampeBoard board) {
   }
 
   // Output head
-  float[] out = linear(h, wOut1, bOut1); // [64], ReLU
+  float[] out = linear(h, wOut1, bOut1);  // [64]
   out = relu(out);
-  float score = linear(out, wOut2, bOut2)[0]; // [1]
-  return (float) Math.tanh(score);
+  float raw = linear(out, wOut2, bOut2)[0];  // [1]
+
+  // Forced-pass: direct output shortcut, bypasses trunk
+  int forcedPass = computeForcedPass(board, lastLandingBand);
+  raw += wForcedPass * forcedPass;
+
+  return (float) Math.tanh(raw);
 }
 ```
 
@@ -230,11 +276,17 @@ public float evaluate(EscampeBoard board) {
 &nbsp;  
 ## Optimizations
 ### Masks, maps and channels
-Band masks, departure masks, landing masks, coordinate channels and extra attack/escape/tension-style maps are the strongest low-cost inductive bias improvements for our setting. They provide the network with explicit information about the board's spatial structure and piece interactions, which is crucial for learning effective evaluations. These fixed input channels allow the network to focus on learning strategic patterns rather than having to infer basic board properties from raw piece positions alone.
+Band masks, departure masks, band-landing maps, row/column occupancy maps, unicorn-relative attacker maps, escape scalars, and the forced-pass direct shortcut are the strongest low-cost inductive bias improvements for our setting. They provide the network with explicit information about the board's spatial structure, piece interactions, and game-specific mechanics that are critical for learning effective evaluations.
+We are currently using the following inputs:  
+- Row/column occupancy maps (channels 11–14)
+- Band-landing maps (channels 8–10)
+- Unicorn escape counts (scalars at `h`)
+- Forced-pass direct shortcut (scalar at output)
+- Unicorn-relative attacker map (channel 15)
 
 &nbsp;  
 ### Iterative re-bootstrap rounds
-After training the initial network, we can use it to generate new labels for the training positions by running a deeper minimax search (e.g., depth 6–8) that uses the network as its evaluation function. This creates a stronger "teacher" for the next round of training, allowing the network to learn from improved evaluations and further refine its understanding of the game. We can repeat this process for several rounds, each time using the latest network to generate better labels, which leads to progressively stronger evaluations and ultimately a more powerful engine. This iterative bootstrapping is a key technique used in AlphaZero and similar game-playing AI systems.
+After training the initial network, we can use it to generate new labels by running a deeper minimax search (depth 6–8) with the network as its evaluation function. This iterative bootstrapping is a key technique used in AlphaZero.
 
 &nbsp;  
 ### Weighted value loss
@@ -242,49 +294,52 @@ We can modify the MSE loss to give more weight to positions that are closer to w
 
 &nbsp;  
 ### SE blocks
-Squeeze-and-Excitation (SE) blocks can be added after the convolutional layers to allow the network to learn channel-wise attention, which can help it focus on the most relevant features for evaluation. SE blocks are lightweight and can be easily integrated into the existing architecture without significantly increasing the parameter count or inference time.
+Squeeze-and-Excitation blocks can be added after convolutional layers to allow the network to learn channel-wise attention. Lightweight and easily integrated.
 
 &nbsp;  
-### Depthwise separable convolutions (standard convs only)
-Replacing the standard convolutions in the encoder with depthwise separable convolutions can reduce the number of parameters and computational cost while maintaining performance. However, this should be applied carefully, as overuse can lead to a loss of representational power. We can start by replacing only the first convolutional layer and evaluate the impact on accuracy and inference speed before considering further replacements.
-[theaisummer](https://theaisummer.com/receptive-field/)
+### Depthwise separable convolutions
+Replacing standard convolutions in the encoder with depthwise separable convolutions can reduce parameters and computational cost while maintaining performance.
 
 &nbsp;  
 ### Policy head for move ordering
-We propose adding a **policy head** to the network that outputs a probability distribution over the ~60 possible moves. This is used purely for move ordering in the alpha-beta search, not for move selection directly. The policy head would be a simple linear layer on top of the trunk output `h`: `policy_head = nn.Sequential(Linear(256,64), ReLU(), Linear(64,60), Softmax(dim=-1))`. This allows us to explore the most promising moves first, leading to better alpha-beta pruning and deeper search within the same time budget.
+We propose adding a **policy head** that outputs a probability distribution over the ~96 possible moves (up from ~60 under straight-line movement, due to broken-path movement reaching more destinations per band: 4/8/16 unique destinations for band 1/2/3 respectively from interior squares). Used purely for move ordering in alpha-beta search.
 
-Then for each node in the search tree, we would:
-1. Generate legal moves (using the existing move generator, very fast)
-2. Call the network's **policy head** to get move probabilities and **sort** the legal moves accordingly. This is done once per node and is slower which is a worthwhile investment given the improved pruning it enables.
-3. Run alpha-beta search with the well-ordered moves, which allows us to search much deeper due to better pruning.
-4. At leaf nodes, we use the **handcrafted evaluation function** for a fast evaluation instead of calling the network, which is slower but unnecessary at the leaf since the handcrafted eval already captures the key signals for static positions. **/!\\** If the network isn't really slower than the evaluation, we should use it for leaves too.
+```python
+policy_head = nn.Sequential(
+    Linear(258, 64),
+    ReLU(),
+    Linear(64, 96),
+    Softmax(dim=-1)
+)
+```
 
+Then for each node in the search tree:
+1. Generate legal moves (existing move generator, very fast)
+2. Call the policy head to get move probabilities and sort moves once per node (slower but improves pruning)
+3. Run alpha-beta with well-ordered moves for better pruning
+4. Use handcrafted eval at leaf nodes **/!\** unless network inference is fast enough
 
 &nbsp;  
 ### Quantization
-Here are the quantization choices for each layer, along with the rationale:  
-| Layer                 | Params | Quantize?    | Why                                 |
-| --------------------- | ------ | ------------ | ----------------------------------- |
-| Conv layers (encoder) | ~33K   | INT8         | Weights are small, well-distributed |
-| Linear proj (2688→32) | ~86K   | INT8         | Biggest layer, most to gain         |
-| ResBlock linears      | ~8K    | INT8         | Clean after ClippedReLU             |
-| Output Linear(64→1)   | 65     | keep float32 | Tiny, output precision matters      |
-| Band mask channels    | fixed  | N/A          | Already binary (0/1)                |
-
-We expect around a 4× reduction in model size and a 2–3× speedup in inference time, with minimal accuracy loss (<1% on a well-trained model). The main bottleneck is the linear projection layer, which benefits the most from quantization. The convolutional layers are already small and fast, so the relative gain is smaller but still significant.  
-
+| Layer                    | Params | Quantize?    | Why                                  |
+| ------------------------ | ------ | ------------ | ------------------------------------ |
+| Conv layers (encoder)    | ~33K   | INT8         | Weights are small, well-distributed  |
+| Linear proj (2688→32)    | ~86K   | INT8         | Biggest layer, most to gain          |
+| ResBlock linears         | ~8K    | INT8         | Clean after ClippedReLU              |
+| Output Linear(64→1)      | 65     | keep float32 | Tiny, output precision matters       |
+| w_forced_pass            | 1      | keep float32 | Single scalar, precision matters     |
+| Band mask channels       | fixed  | N/A          | Already binary (0/1)                 |
 
 In ONNX/PyTorch:  
 ```python
-# Post-training static quantization
 model.eval()
 model_q = torch.quantization.quantize_dynamic(
   model,
   {nn.Linear, nn.Conv2d},
   dtype=torch.qint8
 )
-# Export to ONNX
-torch.onnx.export(model_q, (x_w, x_b), "escampe_net_q8.onnx")
+torch.onnx.export(model_q, (x_w, x_b, esc_me, esc_opp, forced_pass),
+                  "escampe_net_q8.onnx")
 ```
 
 And in Java with ONNX Runtime:  
@@ -298,18 +353,19 @@ OrtSession session = env.createSession("escampe_net_q8.onnx");
 
 &nbsp;  
 ### Distillation
-We can train a smaller "student" network to mimic the outputs of the larger "teacher" network. The student is designed to be more efficient for inference while retaining most of the teacher's performance. The distillation loss combines the standard MSE loss with a KL divergence loss that encourages the student to match the teacher's output distribution.  
+Train a smaller "student" network to mimic the outputs of the larger "teacher" network using KL divergence + MSE distillation loss.  
 [Rapfi: Distilling Efficient Neural Network for the Game of Gomoku](https://arxiv.org/html/2503.13178)  
 
 
 &nbsp;  
 ### Rejected optimizations
-- **Attention pooling / self-attention in encoder**: Conflicts with incremental-style updates, and introduces a big global interaction cost compared to the board size
-- **NNUE-style incremental updates**: Current architecture is convolutional and not naturally NNUE-like
-- **LayerNorm replacing folded BatchNorm**: Export pipeline already folds BatchNorm away, which is inference-friendly
-- **Pre-activation ResNet**: Probably too little upside for only 3 residual blocks
-- **DenseNet-style dense connections**: Adds memory traffic and projection complexity without obvious benefit on a flattened compact trunk
-- **Full transformerization**: Too expensive and poorly matched for our latency target and board size
+- **1×6/6×1 asymmetric kernels**: Were originally considered to capture row/column patterns due to a missunderstanding of the movement rules. However, with broken-path movement, pieces can reach both orthogonal and diagonal neighbours, so a standard 3×3 kernel is more appropriate to capture all local interactions.
+- **Attention pooling / self-attention in encoder**: Conflicts with incremental-style updates, global interaction cost excessive for board size.
+- **NNUE-style incremental updates**: Architecture is convolutional and not naturally NNUE-like.
+- **LayerNorm replacing folded BatchNorm**: Export pipeline folds BatchNorm away at inference.
+- **Pre-activation ResNet**: Too little upside for only 3 residual blocks.
+- **DenseNet-style dense connections**: Memory overhead without obvious benefit.
+- **Full transformerization**: Too expensive and poorly matched for latency target and board size.
 
 
 ---
@@ -319,14 +375,15 @@ We can train a smaller "student" network to mimic the outputs of the larger "tea
 ### Papers and architecture references
 - [Bromley et al. - 1993](https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html): Siamese network / shared-weight dual-perspective encoding
 - [He et al. - 2015](https://arxiv.org/abs/1512.03385): ResNet residual blocks
-- [Szegedy et al. - 2016](https://arxiv.org/abs/1512.00567): asymmetric convolutions
-- [Chen et al. - 2015](https://arxiv.org/abs/1511.07122): atrous (dilated) convolutions
-- [AlphaZero - 2017](https://arxiv.org/abs/1712.01815): value head and improved evaluation via search
-- [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387): small-board AlphaZero scaling
-- [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6): transformer-based chess scaling insights
-- [NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html): ClippedReLU, dual accumulator, and neural evaluation concepts
-- [Rapfi: Distilling Efficient Neural Network for the Game of Gomoku](https://arxiv.org/html/2503.13178): distillation techniques for board game evaluation networks
+- [Chen et al. - 2015](https://arxiv.org/abs/1511.07122): Atrous (dilated) convolutions
+- [AlphaZero - 2017](https://arxiv.org/abs/1712.01815): Value head and improved evaluation via search
+- [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387): Small-board AlphaZero scaling
+- [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6): Transformer-based chess scaling insights
+- [NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html): ClippedReLU, dual accumulator, HalfKP king-relative features, direct output shortcuts
+- [Stockfish HalfKAv2 architecture](https://github.com/official-stockfish/Stockfish/blob/master/src/nnue/nnue_architecture.h): FullThreats direct-to-output connection (source of J shortcut idea)
+- [Stockfish NNUE - Chessprogramming wiki](https://www.chessprogramming.org/Stockfish_NNUE): HalfKP/HalfKAv2 feature set design rationale
+- [Rapfi: Distilling Efficient Neural Network for the Game of Gomoku](https://arxiv.org/html/2503.13178): Distillation techniques for board game evaluation networks
 
 ### Tools and implementation references
 - [PyTorch CUDA 11.8 wheels](https://download.pytorch.org/whl/cu118): GPU build used for training on GTX 1080
-- [ONNX Runtime](https://onnxruntime.ai): inference engine referenced for quantized model execution
+- [ONNX Runtime](https://onnxruntime.ai): Inference engine referenced for quantized model execution
