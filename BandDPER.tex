@@ -284,6 +284,7 @@ This also provides graceful degradation as, if a block learns to output zero (i.
   \item \textbf{Scalar injection at trunk input}: Escape counts are global signals that do not have a natural spatial representation. Injecting them at \texttt{h} (after the CNN, before the trunk) lets the ResBlocks learn to combine spatial features with game-state scalars. The trunk's Linear($258\to258$) layer learns the projection automatically.
 \end{itemize}
 
+\newpage
 \subsubsection{Output Head}
 The output head uses a direct bypass for forced pass signals, inspired by \href{https://github.com/official-stockfish/Stockfish/blob/master/src/nnue/nnue_architecture.h}{Stockfish's PSQT direct-to-output shortcut}:
 
