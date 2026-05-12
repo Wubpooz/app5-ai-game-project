@@ -43,7 +43,8 @@ The main drawback is that it would be slower but according to [AlphaZero](https:
 ## Model Architecture
 This architecture blends known components into a novel evaluation network:
 - **Siamese CNN spatial encoder** with shared weights and dual-perspective input
-- **Asymmetric rook-aware kernels** (1×6 and 6×1)
+- **Asymmetric rook-aware kernels** (1×6 and 6×1) 
+<!-- TODO, NOT ROOK Like, just orthogonals, so L are possible -->
 - **Band topology encoded as fixed input channels**
 - **Residual trunk** with ClippedReLU at the perspective boundary
 
@@ -151,6 +152,10 @@ loss = F.mse_loss(prediction, target)
 Additionally, we could include an auxiliary loss to predict the "tension" (number of attackers) which is a key signal in the game, but this is optional and may not be necessary if the main loss is sufficient for learning. It would also complicate the training pipeline since we would need to compute tension labels for each position.
 
 
+### Optimizer and Training Hyperparameters
+We use **AdamW** (`lr=1e-3`, `weight_decay=1e-4`) with **Cosine Annealing with Warm Restarts** to escape plateaus during iterative bootstrapping rounds since each round is essentially a new curriculum. We also apply **gradient clipping** (`clip_grad_norm_=1.0`) to prevent exploding gradients, especially with ClippedReLU activations. If we want aggressive fast training, we could consider using **OneCycleLR**, which ramps up the learning rate and then decays sharply, often converging in half the epochs. However, AdamW with cosine annealing is a solid and well-understood choice that should work well for this problem.
+
+
 ### Training Hardware
 We used a GTX 1080 GPU for training, which is more than sufficient for this model size and dataset. Training should take around 30 minutes to 1 hour depending on the number of epochs and batch size.  
 We installed CUDA then used the appropriate PyTorch wheels for CUDA 11.8, which is the maximum supported version for GTX 1080.
@@ -224,6 +229,27 @@ public float evaluate(EscampeBoard board) {
 
 &nbsp;  
 ## Optimizations
+### Masks, maps and channels
+Band masks, departure masks, landing masks, coordinate channels and extra attack/escape/tension-style maps are the strongest low-cost inductive bias improvements for our setting. They provide the network with explicit information about the board's spatial structure and piece interactions, which is crucial for learning effective evaluations. These fixed input channels allow the network to focus on learning strategic patterns rather than having to infer basic board properties from raw piece positions alone.
+
+&nbsp;  
+### Iterative re-bootstrap rounds
+After training the initial network, we can use it to generate new labels for the training positions by running a deeper minimax search (e.g., depth 6–8) that uses the network as its evaluation function. This creates a stronger "teacher" for the next round of training, allowing the network to learn from improved evaluations and further refine its understanding of the game. We can repeat this process for several rounds, each time using the latest network to generate better labels, which leads to progressively stronger evaluations and ultimately a more powerful engine. This iterative bootstrapping is a key technique used in AlphaZero and similar game-playing AI systems.
+
+&nbsp;  
+### Weighted value loss
+We can modify the MSE loss to give more weight to positions that are closer to winning or losing.
+
+&nbsp;  
+### SE blocks
+Squeeze-and-Excitation (SE) blocks can be added after the convolutional layers to allow the network to learn channel-wise attention, which can help it focus on the most relevant features for evaluation. SE blocks are lightweight and can be easily integrated into the existing architecture without significantly increasing the parameter count or inference time.
+
+&nbsp;  
+### Depthwise separable convolutions (standard convs only)
+Replacing the standard convolutions in the encoder with depthwise separable convolutions can reduce the number of parameters and computational cost while maintaining performance. However, this should be applied carefully, as overuse can lead to a loss of representational power. We can start by replacing only the first convolutional layer and evaluate the impact on accuracy and inference speed before considering further replacements.
+[theaisummer](https://theaisummer.com/receptive-field/)
+
+&nbsp;  
 ### Policy head for move ordering
 We propose adding a **policy head** to the network that outputs a probability distribution over the ~60 possible moves. This is used purely for move ordering in the alpha-beta search, not for move selection directly. The policy head would be a simple linear layer on top of the trunk output `h`: `policy_head = nn.Sequential(Linear(256,64), ReLU(), Linear(64,60), Softmax(dim=-1))`. This allows us to explore the most promising moves first, leading to better alpha-beta pruning and deeper search within the same time budget.
 
@@ -235,7 +261,6 @@ Then for each node in the search tree, we would:
 
 
 &nbsp;  
-
 ### Quantization
 Here are the quantization choices for each layer, along with the rationale:  
 | Layer                 | Params | Quantize?    | Why                                 |
@@ -271,6 +296,20 @@ OrtSession session = env.createSession("escampe_net_q8.onnx");
 ```
 
 
+&nbsp;  
+### Distillation
+We can train a smaller "student" network to mimic the outputs of the larger "teacher" network. The student is designed to be more efficient for inference while retaining most of the teacher's performance. The distillation loss combines the standard MSE loss with a KL divergence loss that encourages the student to match the teacher's output distribution.  
+[Rapfi: Distilling Efficient Neural Network for the Game of Gomoku](https://arxiv.org/html/2503.13178)  
+
+
+&nbsp;  
+### Rejected optimizations
+- **Attention pooling / self-attention in encoder**: Conflicts with incremental-style updates, and introduces a big global interaction cost compared to the board size
+- **NNUE-style incremental updates**: Current architecture is convolutional and not naturally NNUE-like
+- **LayerNorm replacing folded BatchNorm**: Export pipeline already folds BatchNorm away, which is inference-friendly
+- **Pre-activation ResNet**: Probably too little upside for only 3 residual blocks
+- **DenseNet-style dense connections**: Adds memory traffic and projection complexity without obvious benefit on a flattened compact trunk
+- **Full transformerization**: Too expensive and poorly matched for our latency target and board size
 
 
 ---
@@ -278,15 +317,16 @@ OrtSession session = env.createSession("escampe_net_q8.onnx");
 &nbsp;  
 ## References
 ### Papers and architecture references
-- [Bromley et al. - 1993](https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html) — Siamese network / shared-weight dual-perspective encoding
-- [He et al. - 2015](https://arxiv.org/abs/1512.03385) — ResNet residual blocks
-- [Szegedy et al. - 2016](https://arxiv.org/abs/1512.00567) — asymmetric convolutions
-- [Chen et al. - 2015](https://arxiv.org/abs/1511.07122) — atrous (dilated) convolutions
-- [AlphaZero - 2017](https://arxiv.org/abs/1712.01815) — value head and improved evaluation via search
-- [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387) — small-board AlphaZero scaling
-- [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6) — transformer-based chess scaling insights
-- [NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html) — ClippedReLU, dual accumulator, and neural evaluation concepts
+- [Bromley et al. - 1993](https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html): Siamese network / shared-weight dual-perspective encoding
+- [He et al. - 2015](https://arxiv.org/abs/1512.03385): ResNet residual blocks
+- [Szegedy et al. - 2016](https://arxiv.org/abs/1512.00567): asymmetric convolutions
+- [Chen et al. - 2015](https://arxiv.org/abs/1511.07122): atrous (dilated) convolutions
+- [AlphaZero - 2017](https://arxiv.org/abs/1712.01815): value head and improved evaluation via search
+- [Train on Small, Play the Large: scaling up board games with AlphaZero and GNN](https://arxiv.org/pdf/2107.08387): small-board AlphaZero scaling
+- [Mastering Chess with a Transformer Model](https://arxiv.org/html/2409.12272v1#S6): transformer-based chess scaling insights
+- [NNUE - 2018](https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html): ClippedReLU, dual accumulator, and neural evaluation concepts
+- [Rapfi: Distilling Efficient Neural Network for the Game of Gomoku](https://arxiv.org/html/2503.13178): distillation techniques for board game evaluation networks
 
 ### Tools and implementation references
-- [PyTorch CUDA 11.8 wheels](https://download.pytorch.org/whl/cu118) — GPU build used for training on GTX 1080
-- [ONNX Runtime](https://onnxruntime.ai) — inference engine referenced for quantized model execution
+- [PyTorch CUDA 11.8 wheels](https://download.pytorch.org/whl/cu118): GPU build used for training on GTX 1080
+- [ONNX Runtime](https://onnxruntime.ai): inference engine referenced for quantized model execution
