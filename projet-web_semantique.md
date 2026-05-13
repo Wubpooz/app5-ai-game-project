@@ -122,4 +122,3 @@ Moreover, you need to develop in the report, the process of getting the answers 
 - What difficulties were there ? And how have you solved them ?
 - Do you see some benefits and limitations of the techniques ?
 - Can you justify the reason for your answers ?
-

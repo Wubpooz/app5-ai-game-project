@@ -2,6 +2,90 @@
 ## Search
 - [ ] Minimax with alpha-beta pruning
 
+- [ ] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
+    ```java
+    public class TimeManager {
+        private final long softBoundMs;
+        private final long hardBoundMs;
+        private final long startTimeNs;
+
+        public TimeManager(long remainingMs, int legalMoveCount) {
+            int estimatedMovesLeft = estimateMovesLeft(remainingMs);
+
+            // (peu de coups légaux) -> dépenser moins
+            double complexityFactor = complexityFactor(legalMoveCount);
+
+            long baseTime = remainingMs / estimatedMovesLeft;
+            this.softBoundMs = (long)(baseTime * complexityFactor);
+            this.hardBoundMs = Math.min(softBoundMs * 3L, remainingMs / 5);
+            this.startTimeNs = System.nanoTime();
+        }
+
+        private int estimateMovesLeft(long remainingMs) {
+            // Plus de temps restant = on suppose plus de coups à jouer
+            if (remainingMs > 200_000) return 40;
+            if (remainingMs > 60_000)  return 25;
+            if (remainingMs > 10_000)  return 15;
+            return 8;  // fin de partie, jouer vite
+        }
+
+        private double complexityFactor(int legalMoveCount) {
+            // 1-2 coups légaux (contrainte de bande forcée) -> rien à chercher
+            if (legalMoveCount <= 2) return 0.3;
+            // Beaucoup de coups -> position complexe, dépenser plus
+            if (legalMoveCount >= 20) return 1.5;
+            return 1.0;
+        }
+
+        public boolean shouldStopSoft() {
+            long elapsed = (System.nanoTime() - startTimeNs) / 1_000_000;
+            return elapsed >= softBoundMs;
+        }
+
+        public boolean shouldStopHard() {
+            long elapsed = (System.nanoTime() - startTimeNs) / 1_000_000;
+            return elapsed >= hardBoundMs;
+        }
+    }
+
+    public String bestMove(EscampeBoard board, String player, long remainingMs) {
+        String[] moves = board.possiblesMoves(player);
+
+        // Cas trivial : 0 ou 1 coup
+        if (moves.length == 0) return "E";
+        if (moves.length == 1) return moves[0];
+
+        TimeManager tm = new TimeManager(remainingMs, moves.length);
+        String bestMove = moves[0];  // fallback garanti
+        int bestScore = Integer.MIN_VALUE;
+
+        // Iterative deepening
+        for (int depth = 1; depth <= MAX_DEPTH; depth++) {
+            if (tm.shouldStopSoft()) break;
+
+            SearchResult result = negamax(board, player, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, tm);
+
+            // Ne mettre à jour que si l'itération s'est terminée proprement
+            if (!result.wasAborted()) {
+                bestMove = result.move();
+                bestScore = result.score();
+            }
+        }
+        return bestMove;
+    }
+
+    private SearchResult negamax(EscampeBoard board, String player, int depth, int alpha, int beta, TimeManager tm) {
+        // à chaque noeud
+        if (tm.shouldStopHard()) return SearchResult.aborted();
+        
+        if (depth == 0 || board.gameOver()) 
+            return SearchResult.of(evaluate(board, player), null);
+
+        // ... 
+    }
+    ```
+
+
 - [ ] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
 
 - [ ] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
