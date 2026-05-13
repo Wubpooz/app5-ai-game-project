@@ -25,8 +25,8 @@ public class Solo {
     private static IJoueur joueurNoir;
     
     // Ne pas modifier ces constantes, elles seront utilisees par l'arbitre
-    private final static int BLANC = -1;
-    private final static int NOIR = 1;
+    private static final int BLANC = -1;
+    private static final int NOIR = 1;
     
     private static int nbCoups = 0;
     
@@ -137,7 +137,7 @@ public class Solo {
      * 
      * @param args
      */
-    public static void main(String args[]) {
+    public static void main(String[] args) {
     	/*// S'il le faut, on initialise l'applet graphique
     	if (APPLETGRAPHIQUE) {
     		f = new JFrame("Vue du jeu");
@@ -155,16 +155,13 @@ public class Solo {
     	if (args.length == 0) { // On a deux classes à charger
     		joueurBlanc = getDefaultPlayer("Blanc");
     		joueurNoir = getDefaultPlayer("Noir");
-    	}
-    	else if (args.length == 2) { // On a deux classes à charger
+    	} else if (args.length == 2) { // On a deux classes à charger
     		joueurBlanc = getDefaultPlayer("Blanc");
     		joueurNoir = getDefaultPlayer("Noir");
-    	}
-    	else if (args.length == 3) {
+    	} else if (args.length == 3) {
     		joueurBlanc = loadNamedPlayer(args[0], "Blanc");
     		joueurNoir = loadNamedPlayer(args[0], "Noir");
-    	}
-    	else if (args.length == 4) {
+    	} else if (args.length == 4) {
     		joueurBlanc = loadNamedPlayer(args[0], "Blanc");
     		joueurNoir = loadNamedPlayer(args[1], "Noir");
     	}

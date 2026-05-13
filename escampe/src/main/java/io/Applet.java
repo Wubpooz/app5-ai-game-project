@@ -17,18 +17,20 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 
+import io.Applet.Board;
+
 public class Applet extends JApplet {
 	// Constantes pour les pièces
-	final private static int LICORNEBLANCHE = -2;
-	final private static int PALADINBLANC = -1;
-	final private static int LICORNENOIRE = 2;
-	final private static int PALADINNOIR = 1;
-	final private static int VIDE = 0;
+	private static final int LICORNEBLANCHE = -2;
+	private static final int PALADINBLANC = -1;
+	private static final int LICORNENOIRE = 2;
+	private static final int PALADINNOIR = 1;
+	private static final int VIDE = 0;
 	
 	// Constantes pour le plateau
-	final private static int LARGEUR = 6;
-    final private static int HAUTEUR = 6;
-    final private static int[][] lisereCase = {
+	private static final int LARGEUR = 6;
+  private static final int HAUTEUR = 6;
+  private static final int[][] lisereCase = {
 		{1, 2, 2, 3, 1, 2},
 		
 		{3, 1, 3, 1, 3, 2}, 
@@ -42,32 +44,32 @@ public class Applet extends JApplet {
 		{3, 2, 2, 1, 3, 2}
 	};
     
-    // Constantes pour les couleurs
-    Color DARK = new Color(155, 102, 95);
+  // Constantes pour les couleurs
+  Color DARK = new Color(155, 102, 95);
 	Color LIGHT = new Color(239, 210, 158);
 	Color BLACK = new Color(255, 255, 255);
 	Color WHITE = new Color(0, 0, 0);
 	Color HIGHLIGHT = new Color(255, 0, 0);
     
-    // Constantes pour l'affichage
-    final private static int TAILLECASE = 100;
-    final private static int TAILLEPION = 60;
-    final private static Dimension FRAMEDIMENSION = new Dimension(TAILLECASE*6 + 260,TAILLECASE*6 + 60);
-    
-    private static final long serialVersionUID = 1L;
-    private JList brdList;
-    private Board displayBoard;
-    private JScrollPane scrollPane;
-    private DefaultListModel listModel;
-    private Frame myFrame;
+  // Constantes pour l'affichage
+  private static final int TAILLECASE = 100;
+  private static final int TAILLEPION = 60;
+  private static final Dimension FRAMEDIMENSION = new Dimension(TAILLECASE*6 + 260,TAILLECASE*6 + 60);
+  
+  private static final long serialVersionUID = 1L;
+  private JList<Board> brdList;
+  private Board displayBoard;
+  private JScrollPane scrollPane;
+  private DefaultListModel<Board> listModel;
+  private Frame myFrame;
 
-    static int cpt = 0;
-    
-    // Autres constantes utiles pour l'affichage du plateau d'Escampe
-    int mpiece = (int) (TAILLECASE - TAILLEPION)/2;
-    
-    int epaisseurCercle = (int) (TAILLECASE*0.1);
-    int epaisseurInterCercle = (int) (TAILLECASE*0.05);
+  static int cpt = 0;
+  
+  // Autres constantes utiles pour l'affichage du plateau d'Escampe
+  int mpiece = (TAILLECASE - TAILLEPION)/2;
+  
+  int epaisseurCercle = (int) (TAILLECASE*0.1);
+  int epaisseurInterCercle = (int) (TAILLECASE*0.05);
     
  	int diametre1e = TAILLECASE;                        // extérieur 1er cercle
  	int diametre1i = diametre1e - epaisseurCercle;      // intérieur 1er cercle
@@ -77,12 +79,13 @@ public class Applet extends JApplet {
  	int diametre3i = diametre3e - epaisseurCercle;      // intérieur 3eme cercle
  	
  	int m1e = 0;
- 	int m1i = (int) (TAILLECASE - diametre1i)/2;
- 	int m2e = (int) (TAILLECASE - diametre2e)/2;
- 	int m2i = (int) (TAILLECASE - diametre2i)/2;
- 	int m3e = (int) (TAILLECASE - diametre3e)/2;
- 	int m3i = (int) (TAILLECASE - diametre3i)/2;
+ 	int m1i = (TAILLECASE - diametre1i)/2;
+ 	int m2e = (TAILLECASE - diametre2e)/2;
+ 	int m2i = (TAILLECASE - diametre2i)/2;
+ 	int m3e = (TAILLECASE - diametre3e)/2;
+ 	int m3i = (TAILLECASE - diametre3i)/2;
 
+    @Override
     public void init() {
     	System.out.println("Initialisation BoardApplet" + cpt++);
     	buildUI(getContentPane());
@@ -99,10 +102,10 @@ public class Applet extends JApplet {
     	
     	displayBoard = new Board("Coups :", temp);
     	
-    	listModel = new DefaultListModel();
+    	listModel = new DefaultListModel<>();
     	listModel.addElement(displayBoard);
     	
-    	brdList = new JList(listModel);
+    	brdList = new JList<>(listModel);
     	brdList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     	brdList.setSelectedIndex(0);
     	scrollPane = new JScrollPane(brdList);
@@ -110,11 +113,13 @@ public class Applet extends JApplet {
     	scrollPane.setPreferredSize(new Dimension(200, d.height));
     	
     	brdList.addKeyListener(new java.awt.event.KeyAdapter() {
+    		@Override
     		public void keyPressed(KeyEvent e) {
     			brdList_keyPressed(e);
     		}
     	});
     	brdList.addMouseListener(new java.awt.event.MouseAdapter() {
+    		@Override
     		public void mouseClicked(MouseEvent e) {
     			brdList_mouseClicked(e);
     		}
@@ -129,6 +134,7 @@ public class Applet extends JApplet {
     	paint(g);
     }
 
+    @Override
     public void paint(Graphics g) {
     	displayBoard.paint(g);
     }
@@ -149,16 +155,16 @@ public class Applet extends JApplet {
     void brdList_keyPressed(KeyEvent e) {
     	int index = brdList.getSelectedIndex();
     	if (e.getKeyCode() == KeyEvent.VK_UP && index > 0)
-    		displayBoard = (Board) listModel.getElementAt(index - 1);
+    		displayBoard = listModel.getElementAt(index - 1);
     	
     	if (e.getKeyCode() == KeyEvent.VK_DOWN && index < (listModel.getSize() - 1))
-    		displayBoard = (Board) listModel.getElementAt(index + 1);
+    		displayBoard = listModel.getElementAt(index + 1);
     	
     	update(myFrame.getGraphics(), myFrame.getInsets());
     }
 
     void brdList_mouseClicked(MouseEvent e) {
-    	displayBoard = (Board) listModel.getElementAt(brdList.getSelectedIndex());
+    	displayBoard = listModel.getElementAt(brdList.getSelectedIndex());
     	update(myFrame.getGraphics(), myFrame.getInsets());
     }
     
@@ -184,9 +190,9 @@ public class Applet extends JApplet {
     		move = mv;
     		if (mv.length() == 5) {
     			String[] positions = mv.split("-");
-    			depCol = (int) positions[0].charAt(0) - (int) 'A';
+    			depCol = positions[0].charAt(0) - 'A';
     			depLin = Integer.parseInt(positions[0].substring(1)) - 1;
-    			arvCol = (int) positions[1].charAt(0) - (int) 'A';
+    			arvCol = positions[1].charAt(0) - 'A';
     			arvLin = Integer.parseInt(positions[1].substring(1)) - 1;
     		}
     	}
@@ -283,14 +289,17 @@ public class Applet extends JApplet {
     		}
     	}
     	
+    	@Override
     	public void paint(Graphics g) {
     		drawBoard(g);
     	}
     	
+    	@Override
     	public void update(Graphics g) {
     		drawBoard(g);
     	}
     	
+    	@Override
     	public String toString() {
     		return move;
     	}
