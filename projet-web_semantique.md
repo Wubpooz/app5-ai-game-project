@@ -74,6 +74,40 @@ The `SERVICE` keyword allows us to query multiple SPARQL endpoints in a single q
 ## Question 2
 **Question:** Propose another (complex) question in natural language and give your answer by checking Linked Data (and combined with the help of Chatgpt or LLM-large language model-based methods).
 
+"Which COVID-19 vaccines were developed by which organizations, and in which country are those organizations based?"
+```sparql
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+
+SELECT DISTINCT ?vaccine ?vaccineLabel ?developer ?developerLabel ?country ?countryLabel
+WHERE {
+  ?vaccine wdt:P1924 wd:Q84263196 ;
+           wdt:P178 ?developer .
+  ?developer wdt:P17 ?country .
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+ORDER BY ?countryLabel ?vaccineLabel
+```
+Answer:
+| vaccine | vaccineLabel | developer | developerLabel | country | countryLabel |
+|---|---|---|---|---|---|
+| http://www.wikidata.org/entity/Q97154233 | CoronaVac | http://www.wikidata.org/entity/Q3485048 | Sinovac Biotech | http://www.wikidata.org/entity/Q781 | Antigua and Barbuda |
+| http://www.wikidata.org/entity/Q124341960 | ArVac Cecilia Grierson | http://www.wikidata.org/entity/Q5733950 | National University of General San Martín | http://www.wikidata.org/entity/Q414 | Argentina |
+| http://www.wikidata.org/entity/Q124341960 | ArVac Cecilia Grierson | http://www.wikidata.org/entity/Q6978293 | National Scientific and Technical Research Council | http://www.wikidata.org/entity/Q414 | Argentina |
+| http://www.wikidata.org/entity/Q97154237 | COVAX-19 | http://www.wikidata.org/entity/Q15575 | Flinders University | http://www.wikidata.org/entity/Q408 | Australia |
+| http://www.wikidata.org/entity/Q97154237 | COVAX-19 | http://www.wikidata.org/entity/Q30295531 | Vaxine | http://www.wikidata.org/entity/Q408 | Australia |
+| http://www.wikidata.org/entity/Q98710728 | University of Queensland COVID-19 vaccine candidate | http://www.wikidata.org/entity/Q866012 | University of Queensland | http://www.wikidata.org/entity/Q408 | Australia |
+| http://www.wikidata.org/entity/Q98710728 | University of Queensland COVID-19 vaccine candidate | http://www.wikidata.org/entity/Q908265 | CSL Limited | http://www.wikidata.org/entity/Q408 | Australia |
+| http://www.wikidata.org/entity/Q104005526 | Q104005526 | http://www.wikidata.org/entity/Q833670 | Katholieke Universiteit Leuven | http://www.wikidata.org/entity/Q31 | Belgium |
+| http://www.wikidata.org/entity/Q98655215 | Ad26.COV2.S | http://www.wikidata.org/entity/Q903523 | Janssen Pharmaceutica | http://www.wikidata.org/entity/Q31 | Belgium |
+| http://www.wikidata.org/entity/Q97154233 | CoronaVac | http://www.wikidata.org/entity/Q971299 | Instituto Butantan | http://www.wikidata.org/entity/Q155 | Brazil |
+| ... | ... | ... | ... | ... | ... |
+
+LLMs can then be used to answer questions by generating natural language responses based on the information they have been trained on. However, LLMs may not always have access to the most up-to-date or specific information, which is where Linked Data can be beneficial. Linked Data provides a structured way to access and query data from various sources, allowing for more accurate and comprehensive answers.  
+
 
 ## Question 3
 **Question:** Can you explain the answers? For answers from Linked Data, you can use "CONSTRUCT" to return the "justifications" of your answers. And how about the hybrid approach by combining Linked Data and Chatgpt ? You may refer to DBpedia, Wikidata, or other linked data, such as https://lod-cloud.net, https://linkedlifedata.com/, https://www.ontotext.com/knowledgehub/publications/linked-life-data-knowledge-extraction-semantic-data-integration-pharmaceutical-domain/.
