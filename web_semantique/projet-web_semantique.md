@@ -75,6 +75,7 @@ The `SERVICE` keyword allows us to query multiple SPARQL endpoints in a single q
 **Question:** Propose another (complex) question in natural language and give your answer by checking Linked Data (and combined with the help of Chatgpt or LLM-large language model-based methods).
 
 "Which COVID-19 vaccines were developed by which organizations, and in which country are those organizations based?"
+Run this query on [Wikidata](https://query.wikidata.org/) and give the answer:  
 ```sparql
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -111,8 +112,33 @@ LLMs can then be used to answer questions by generating natural language respons
 
 ## Question 3
 **Question:** Can you explain the answers? For answers from Linked Data, you can use "CONSTRUCT" to return the "justifications" of your answers. And how about the hybrid approach by combining Linked Data and Chatgpt ? You may refer to DBpedia, Wikidata, or other linked data, such as https://lod-cloud.net, https://linkedlifedata.com/, https://www.ontotext.com/knowledgehub/publications/linked-life-data-knowledge-extraction-semantic-data-integration-pharmaceutical-domain/.
+```sparql
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
+CONSTRUCT {
+  ?vaccine wdt:P1924 wd:Q84263196 ;
+           wdt:P178 ?developer ;
+           rdfs:label ?vaccineLabel .
+           
+  ?developer wdt:P17 ?country ;
+             rdfs:label ?developerLabel .
+             
+  ?country rdfs:label ?countryLabel .
+}
+WHERE {
+  ?vaccine wdt:P1924 wd:Q84263196 ;
+           wdt:P178 ?developer .
+  ?developer wdt:P17 ?country .
 
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+```
+Returns a graph: ![alt text](image.png)
+![alt text](download.png)
 
 
 ## Report
