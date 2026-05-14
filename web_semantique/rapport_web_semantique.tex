@@ -22,6 +22,7 @@
 \usepackage{abstract}
 \usepackage{fancyhdr}
 \usepackage{setspace}
+\usepackage{float}
 
 % ── SPARQL / Code style ────────────────────────────────────────────────────────
 \definecolor{sparqlkeyword}{RGB}{0,0,180}
@@ -109,6 +110,7 @@ complementary strengths of both paradigms.
 \vspace{1em}
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Introduction}
 \label{sec:intro}
 
@@ -145,6 +147,7 @@ This project addresses three tasks:
 \end{enumerate}
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Problem Statement}
 \label{sec:problem}
 
@@ -166,6 +169,7 @@ queries, navigate the data models of multiple endpoints, and combine the results
 coherently.
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Question 1 --- Biomedical Federated Query}
 \label{sec:q1}
 
@@ -263,6 +267,7 @@ SELECT DISTINCT ?protein ?proteinName ?goTerm ?goLabel WHERE {
 \end{itemize}
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Question 2 --- COVID-19 Vaccines and Their Developers}
 \label{sec:q2}
 
@@ -337,6 +342,7 @@ from Wikidata through SPARQL --- ChatGPT alone would risk returning outdated or
 fabricated vaccine--country associations.
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Question 3 --- Explanation, Justification, and Hybrid Approach}
 \label{sec:q3}
 
@@ -443,7 +449,52 @@ This pipeline mirrors emerging architectures such as
 \emph{Retrieval-Augmented Generation} (RAG), applied here to structured
 knowledge graphs rather than unstructured text corpora.
 
+\subsection{Visualization of Q2 results via CONSTRUCT}
+
+The following \texttt{CONSTRUCT} query builds an RDF graph representation of
+the vaccine--developer--country relationships for Question~2:
+
+\begin{lstlisting}[caption={\texttt{CONSTRUCT} query for Q2 result visualization.},
+                   label={lst:q3construct_visual}]
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+PREFIX bd: <http://www.bigdata.com/rdf#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+CONSTRUCT {
+  ?vaccine wdt:P1924 wd:Q84263196 ;
+           wdt:P178 ?developer ;
+           rdfs:label ?vaccineLabel .
+           
+  ?developer wdt:P17 ?country ;
+             rdfs:label ?developerLabel .
+             
+  ?country rdfs:label ?countryLabel .
+}
+WHERE {
+  ?vaccine wdt:P1924 wd:Q84263196 ;
+           wdt:P178 ?developer .
+  ?developer wdt:P17 ?country .
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+\end{lstlisting}
+
+This query returns an explicit RDF graph where the interconnections between
+vaccines, their developers, and countries are visualized as named triples.
+Figure~\ref{fig:q2graph} shows the resulting graph structure.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{download.png}
+  \caption{RDF graph visualization of vaccine--developer--country relationships
+           returned by the \texttt{CONSTRUCT} query in Listing~\ref{lst:q3construct_visual}.}
+  \label{fig:q2graph}
+\end{figure}
+
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Discussion}
 \label{sec:discussion}
 
@@ -482,6 +533,7 @@ Human-in-the-loop validation at the query generation step is therefore
 essential.
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \section{Conclusion}
 \label{sec:conclusion}
 
@@ -497,6 +549,7 @@ LLMs lower the barrier to query formulation, while Linked Data guarantees
 accuracy, freshness, and provenance.
 
 % ══════════════════════════════════════════════════════════════════════════════
+\newpage
 \begin{thebibliography}{9}
 
 \bibitem{bernerslee2001}

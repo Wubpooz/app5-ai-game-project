@@ -137,8 +137,7 @@ WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
 ```
-Returns a graph: ![alt text](image.png)
-![alt text](download.png)
+Returns a graph: ![alt text](download.png)
 
 
 ## Report
