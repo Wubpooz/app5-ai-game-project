@@ -97,11 +97,10 @@ We first demonstrate the expressive power of the Semantic Web stack by answering
 a biomedical question (proteins involved in signal transduction and related to
 pyramidal neurons) that cannot be handled by large language models alone due to
 their lack of real-time, structured biological data.
-We then propose and answer a complex geopolitical question about COVID-19 vaccine
-developers using Wikidata.
+We then propose and answer a complex question about COVID-19 vaccine developers using Wikidata.
 Finally, we discuss how \texttt{CONSTRUCT} queries provide formal justification
 for Linked Data answers, and how hybrid Linked Data / LLM pipelines combine the
-complementary strengths of both paradigms.
+complementary strengths of both approaches.
 \end{abstract}
 
 \vspace{0.5em}
@@ -113,8 +112,7 @@ complementary strengths of both paradigms.
 \newpage
 \section{Introduction}
 \label{sec:intro}
-
-The World Wide Web, originally designed for human consumption, has evolved
+The World Wide Web, originally designed for human use, has evolved
 towards a machine-readable layer known as the \emph{Semantic Web} or
 \emph{Web of Data}~\cite{bernerslee2001}.
 At its core, the Semantic Web relies on the Resource Description Framework
@@ -127,21 +125,19 @@ domains from biomedicine (UniProt, Bgee, LinkedLifeData) to culture and
 encyclopaedic knowledge (DBpedia, Wikidata).
 
 In his 2009 TED talk, Tim Berners-Lee challenged the scientific community to
-unlock the potential of Linked Data for answering complex, cross-domain
-questions~\cite{tbl2009}.
-One such question --- ``\textit{What proteins are involved in signal
-transduction and also related to pyramidal neurons?}'' --- illustrates
-precisely why the Semantic Web is indispensable: it requires joining
+make use of Linked Data for answering complex, cross-domain questions~\cite{tbl2009}.
+One such question, ``\textit{What proteins are involved in signal
+transduction and also related to pyramidal neurons?}'', illustrates
+precisely where the Semantic Web shines: it requires joining
 heterogeneous, specialised databases in a single, structured, reproducible
-query, something that Large Language Models (LLMs) alone cannot reliably do.
+query, something that Large Language Models (LLMs) cannot reliably do.
 
 This project addresses three tasks:
 \begin{enumerate}[label=\textbf{Q\arabic*.}]
   \item Demonstrate a Semantic Web method to answer the above biomedical
         question using federated SPARQL.
-  \item Propose and answer a new complex question --- which organisations
-        developed COVID-19 vaccines, and in which countries are they based? ---
-        using Wikidata.
+  \item Propose and answer a new complex question using Wikidata: which organisations
+        developed COVID-19 vaccines, and in which countries are they based?
   \item Explain and justify the answers using \texttt{CONSTRUCT} queries and
         discuss a hybrid Linked Data + LLM approach.
 \end{enumerate}
@@ -150,7 +146,6 @@ This project addresses three tasks:
 \newpage
 \section{Problem Statement}
 \label{sec:problem}
-
 Answering complex factual questions requires three capabilities that simple
 keyword search or LLMs lack: (i)~\textbf{access to up-to-date, structured
 data}, (ii)~\textbf{the ability to join information across heterogeneous
@@ -162,30 +157,24 @@ current state of specialised repositories (e.g.\ UniProt protein annotations),
 and cannot easily provide a formal justification (a \emph{proof}) of how an
 answer was derived from source data.
 
-The Semantic Web stack --- RDF, OWL, SPARQL, and the federated query
-mechanism introduced in SPARQL~1.1 --- directly addresses these limitations.
+The Semantic Web stack directly addresses these limitations (and also predates LLMs).
 The challenge is to translate natural-language questions into correct SPARQL
 queries, navigate the data models of multiple endpoints, and combine the results
-coherently.
+coherently. For these steps, LLMs can be used as assistants.  
 
 % ══════════════════════════════════════════════════════════════════════════════
 \newpage
-\section{Question 1 --- Biomedical Federated Query}
+\section{Question 1: Biomedical Federated Query}
 \label{sec:q1}
-
-\subsection{Question}
-
+We start with the question posed by Tim Berners-Lee, requiring connecting biological databases:  
 \begin{quote}
 \textit{What proteins are involved in signal transduction and also related to
 pyramidal neurons?}
 \end{quote}
 
-This question was posed by Tim Berners-Lee in his 2009 TED talk as an example
-of a query that could, in principle, be answered by connecting biological
-databases on the Web, but that was not yet tractable at the time.
-
-\subsection{Datasets explored}
-
+~  
+\text{ }\\
+First, we identify the relevant datasets that contain the necessary information:
 \begin{itemize}
   \item \textbf{UniProt} (\url{https://sparql.uniprot.org/sparql}): the
         reference database for protein sequences and functional annotation.
@@ -199,24 +188,25 @@ databases on the Web, but that was not yet tractable at the time.
         the controlled vocabulary linking biological processes to GO terms,
         used to navigate the hierarchy of signal transduction subprocesses.
 \end{itemize}
+We also explored other datasets but they didn't provide the necessary data or were difficult to query.
 
-\subsection{Method}
 
-The key insight is that the two conditions in the question are held in
-\emph{different} databases:
+
+\text{ }\\
+The key insight is that the two conditions in the question are held in \emph{different} databases:
 \begin{enumerate}
   \item Signal transduction annotation lives in UniProt (via GO terms).
   \item Expression in pyramidal neurons lives in Bgee (via anatomical entity
         labels).
 \end{enumerate}
-
-SPARQL~1.1's \texttt{SERVICE} keyword enables federated queries: a single
-SPARQL query can delegate sub-queries to remote endpoints and join the results
-locally. The bridge between the two databases is the UniProt identifier, which
+To query both services in a single query, we found the \texttt{SERVICE} keyword 
+that can delegate sub-queries to remote endpoints and join the results locally. 
+The bridge between the two databases is the UniProt identifier, which
 Bgee exposes through the \texttt{lscr:xrefUniprot} predicate.
 
-\subsection{SPARQL Query}
 
+\text{ }\\
+We therefore propose the following query:  
 \begin{lstlisting}[caption={Federated SPARQL query joining UniProt and Bgee.},
                    label={lst:q1}]
 PREFIX up:    <http://purl.uniprot.org/core/>
@@ -248,8 +238,8 @@ SELECT DISTINCT ?protein ?proteinName ?goTerm ?goLabel WHERE {
 }
 \end{lstlisting}
 
-\subsection{Difficulties encountered}
-
+\text{ }\\
+We faced several challenges in formulating and executing this federated query:
 \begin{itemize}
   \item \textbf{Data model exploration}: the predicate connecting a protein to
         an anatomical entity is not obvious. We first had to inspect the Bgee
@@ -261,35 +251,29 @@ SELECT DISTINCT ?protein ?proteinName ?goTerm ?goLabel WHERE {
   \item \textbf{Cross-database identifier alignment}: UniProt protein URIs must
         match Bgee's \texttt{lscr:xrefUniprot} values. This required checking
         that both sides use the canonical UniProt accession format.
-  \item \textbf{Endpoint availability}: federated queries depend on remote
-        endpoints being online and responsive; timeouts can occur for broad
-        queries.
 \end{itemize}
 
 % ══════════════════════════════════════════════════════════════════════════════
 \newpage
-\section{Question 2 --- COVID-19 Vaccines and Their Developers}
+\section{Question 2: COVID-19 Vaccines and Their Developers}
 \label{sec:q2}
 
-\subsection{Question}
-
+The complex question we propose is:
 \begin{quote}
 \textit{Which COVID-19 vaccines were developed by which organisations, and
 in which country are those organisations based?}
 \end{quote}
 
-\subsection{Datasets explored}
+\text{ }\\
+After some exploration, we identified that the necessary information is available in
+\textbf{Wikidata} (\url{https://query.wikidata.org}).
+Vaccine entries are linked to their developers via the \texttt{wdt:P178} (\emph{developer}) 
+property, and developers are linked to their country of headquarters via
+\texttt{wdt:P17} (\emph{country}). The class \texttt{wd:Q84263196} identifies COVID-19 vaccines.
 
-\textbf{Wikidata} (\url{https://query.wikidata.org}) was chosen as the primary
-source. Wikidata is a collaboratively maintained knowledge graph that covers
-a wide range of domains, including public health and pharmacology.
-Vaccine entries are linked to their developers via the
-\texttt{wdt:P178} (\emph{developer}) property, and developers are linked to
-their country of headquarters via \texttt{wdt:P17} (\emph{country}).
-The class \texttt{wd:Q84263196} identifies COVID-19 vaccines.
 
-\subsection{SPARQL Query}
-
+\text{ }\\
+Therefore, we propose the following SPARQL query to retrieve the desired information:
 \begin{lstlisting}[caption={Wikidata SPARQL query for COVID-19 vaccine developers.},
                    label={lst:q2}]
 PREFIX wd:        <http://www.wikidata.org/entity/>
@@ -312,8 +296,9 @@ WHERE {
 ORDER BY ?countryLabel ?vaccineLabel
 \end{lstlisting}
 
-\subsection{Sample results}
 
+\text{ }\\
+This query returns a list of COVID-19 vaccines, their developers, and their countries as such:  
 \begin{center}
 \begin{tabular}{lll}
 \toprule
@@ -331,129 +316,29 @@ Sputnik V            & Gamaleya Institute         & Russia \\
 \captionof{table}{A selection of results returned by the Wikidata query.}
 \end{center}
 
-\subsection{Role of LLMs in this task}
 
-ChatGPT was used in a complementary way: we asked it to \emph{suggest} which
+\text{ }\\
+Mixing LLMs and Semantic Web, ChatGPT was used to \emph{suggest} which
 Wikidata properties and item identifiers to use (e.g.\ \texttt{P1924},
 \texttt{Q84263196}), which significantly reduced the time spent browsing the
 Wikidata property catalogue.
 However, the actual, structured, and up-to-date answer was retrieved exclusively
-from Wikidata through SPARQL --- ChatGPT alone would risk returning outdated or
+from Wikidata through SPARQL, ChatGPT alone would risk returning outdated or
 fabricated vaccine--country associations.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \newpage
-\section{Question 3 --- Explanation, Justification, and Hybrid Approach}
+\section{Question 3: Explanation, Justification, and Hybrid Approach}
 \label{sec:q3}
 
 \subsection{Justifying answers with CONSTRUCT}
-
 The \texttt{SELECT} form of SPARQL returns tabular results. To \emph{explain}
-an answer --- i.e.\ to expose the exact RDF triples that support it ---
-SPARQL's \texttt{CONSTRUCT} form builds an explicit sub-graph. This sub-graph
-constitutes a machine-readable \emph{proof} or justification.
+an answer (exposing the exact RDF triples that support it), SPARQL's \texttt{CONSTRUCT} form builds an explicit sub-graph. 
+This sub-graph constitutes a machine-readable \emph{proof} or justification.
 
+\text{ }\\
 For Question~2, the following \texttt{CONSTRUCT} query returns the RDF graph
 that justifies each vaccine--developer--country answer:
-
-\begin{lstlisting}[caption={\texttt{CONSTRUCT} query for Q2 justification.},
-                   label={lst:q3construct}]
-PREFIX wd:        <http://www.wikidata.org/entity/>
-PREFIX wdt:       <http://www.wikidata.org/prop/direct/>
-PREFIX wikibase:  <http://wikiba.se/ontology#>
-PREFIX bd:        <http://www.bigdata.com/rdf#>
-PREFIX rdfs:      <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX schema:    <http://schema.org/>
-
-CONSTRUCT {
-  # The vaccine is an instance of a COVID-19 vaccine
-  ?vaccine wdt:P1924 wd:Q84263196 .
-
-  # The vaccine was developed by this organisation
-  ?vaccine wdt:P178 ?developer .
-
-  # The organisation is based in this country
-  ?developer wdt:P17 ?country .
-
-  # Human-readable labels for traceability
-  ?vaccine  rdfs:label ?vaccineLabel .
-  ?developer rdfs:label ?developerLabel .
-  ?country  rdfs:label ?countryLabel .
-}
-WHERE {
-  ?vaccine wdt:P1924 wd:Q84263196 ;
-           wdt:P178  ?developer .
-  ?developer wdt:P17 ?country .
-
-  SERVICE wikibase:label {
-    bd:serviceParam wikibase:language "en" .
-    ?vaccine   rdfs:label ?vaccineLabel .
-    ?developer rdfs:label ?developerLabel .
-    ?country   rdfs:label ?countryLabel .
-  }
-}
-LIMIT 50
-\end{lstlisting}
-
-The resulting RDF graph makes the derivation fully explicit: each answer triple
-is individually grounded in Wikidata statements, providing both
-\textbf{transparency} (where the data comes from) and
-\textbf{reproducibility} (anyone can re-run the query on the live endpoint).
-
-\subsection{How the hybrid Linked Data + LLM approach works}
-
-Neither Linked Data nor LLMs are sufficient alone. Table~\ref{tab:comparison}
-summarises their complementary strengths.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{p{5.5cm} p{5.5cm}}
-\toprule
-\textbf{Linked Data (SPARQL)} & \textbf{LLMs (ChatGPT)} \\
-\midrule
-Structured, machine-readable data & Natural language understanding \\
-Always up-to-date (live endpoints) & Static knowledge (training cut-off) \\
-Formally provable answers & No formal provenance \\
-Requires precise query formulation & Handles vague / ambiguous questions \\
-Difficult for non-expert users & Accessible to everyone \\
-Can join multiple databases & Limited to training data \\
-\bottomrule
-\end{tabular}
-\caption{Comparison of Linked Data and LLM capabilities.}
-\label{tab:comparison}
-\end{table}
-
-A practical hybrid pipeline proceeds as follows:
-
-\begin{enumerate}
-  \item \textbf{Intent parsing (LLM)}: the natural language question is given
-        to an LLM, which identifies entities (``COVID-19 vaccine'',
-        ``developer'', ``country''), relevant ontology terms, and suggests
-        candidate SPARQL triple patterns and property identifiers.
-  \item \textbf{Query generation (LLM + human validation)}: the LLM generates
-        a draft SPARQL query. The user or an automated validator checks that
-        the properties and classes exist in the target knowledge graph.
-  \item \textbf{Execution (Linked Data)}: the validated query is executed
-        against the live SPARQL endpoint (Wikidata, UniProt, Bgee, etc.)
-        and returns structured, up-to-date results.
-  \item \textbf{Answer generation (LLM)}: the tabular results are fed back to
-        the LLM, which summarises them in fluent natural language and highlights
-        notable patterns (e.g.\ ``Most approved vaccines were developed in
-        partnership between a pharmaceutical company and a university'').
-  \item \textbf{Justification (CONSTRUCT)}: optionally, a
-        \texttt{CONSTRUCT} query retrieves the supporting RDF sub-graph, which
-        is shown to the user as a provenance certificate.
-\end{enumerate}
-
-This pipeline mirrors emerging architectures such as
-\emph{Retrieval-Augmented Generation} (RAG), applied here to structured
-knowledge graphs rather than unstructured text corpora.
-
-\subsection{Visualization of Q2 results via CONSTRUCT}
-
-The following \texttt{CONSTRUCT} query builds an RDF graph representation of
-the vaccine--developer--country relationships for Question~2:
-
 \begin{lstlisting}[caption={\texttt{CONSTRUCT} query for Q2 result visualization.},
                    label={lst:q3construct_visual}]
 PREFIX wd: <http://www.wikidata.org/entity/>
@@ -493,6 +378,57 @@ Figure~\ref{fig:q2graph} shows the resulting graph structure.
   \label{fig:q2graph}
 \end{figure}
 
+
+
+
+\subsection{How the hybrid Linked Data + LLM approach works}
+Neither Linked Data nor LLMs are sufficient alone. Table~\ref{tab:comparison}
+summarises their complementary strengths.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Linked Data} & \textbf{LLMs} \\
+\midrule
+Structured, machine-readable data & Natural language understanding \\
+Up-to-date & Static knowledge (training cut-off) \\
+Formally provable answers & No formal provenance \\
+Requires precise query formulation & Handles vague / ambiguous questions \\
+Difficult for non-expert users & Accessible to everyone \\
+Can join multiple databases & Limited to training data \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of Linked Data and LLM capabilities.}
+\label{tab:comparison}
+\end{table}
+
+A practical pipeline proceeds as follows:
+\begin{enumerate}
+  \item \textbf{Intent parsing (LLM)}: the natural language question is given
+        to an LLM, which identifies entities (``COVID-19 vaccine'',
+        ``developer'', ``country''), relevant ontology terms, and suggests
+        candidate SPARQL triple patterns and property identifiers.
+  \item \textbf{Query generation (LLM + human validation)}: the LLM generates
+        a draft SPARQL query. The user or an automated validator checks that
+        the properties and classes exist in the target knowledge graph.
+  \item \textbf{Execution (Linked Data)}: the validated query is executed
+        against the live SPARQL endpoint (Wikidata, UniProt, Bgee, etc.)
+        and returns structured, up-to-date results.
+  \item \textbf{Answer generation (LLM)}: the tabular results are fed back to
+        the LLM, which summarises them in fluent natural language and highlights
+        notable patterns (e.g.\ ``Most approved vaccines were developed in
+        partnership between a pharmaceutical company and a university'').
+  \item \textbf{Justification (CONSTRUCT)}: optionally, a
+        \texttt{CONSTRUCT} query retrieves the supporting RDF sub-graph, which
+        is shown to the user as a provenance certificate.
+\end{enumerate}
+
+This pipeline mirrors emerging architectures such as
+\emph{Retrieval-Augmented Generation} (RAG), applied here to structured
+knowledge graphs rather than unstructured text corpora.
+
+
 % ══════════════════════════════════════════════════════════════════════════════
 \newpage
 \section{Discussion}
@@ -518,12 +454,12 @@ Figure~\ref{fig:q2graph} shows the resulting graph structure.
         endpoint is unavailable or slow.
   \item \textbf{Data completeness}: Wikidata and other community-driven
         graphs may have missing or inconsistent entries.
-  \item \textbf{No reasoning over free text}: Linked Data cannot interpret
+  \item \textbf{No reasoning}: Linked Data cannot interpret
         documents, images, or unstructured annotations without additional NLP.
 \end{itemize}
 
-\subsection{Benefits and limitations of the hybrid approach}
 
+\subsection{Benefits and limitations of the hybrid approach}
 The hybrid pipeline inherits the benefits of both paradigms: the accessibility
 of LLMs and the precision and provenance of Linked Data.
 Its main limitation is error propagation: an incorrectly generated SPARQL query
@@ -536,7 +472,6 @@ essential.
 \newpage
 \section{Conclusion}
 \label{sec:conclusion}
-
 This project demonstrated that the Semantic Web stack remains uniquely suited
 for answering complex, cross-domain factual questions that require structured,
 live, and justified data retrieval.
