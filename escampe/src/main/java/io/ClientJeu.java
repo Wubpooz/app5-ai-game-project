@@ -32,6 +32,7 @@ public class ClientJeu {
      * @param args
      *            Dans l'ordre : NomClasseJoueur MachineServeur PortEcoute
      */
+    @SuppressWarnings("deprecation")
     public static void main(String[] args) {
     	
     	if (args.length < 3) {
@@ -144,9 +145,19 @@ public class ClientJeu {
           } while (!jeuTermine);
         }
 	    	
-    	}
     	catch (Exception e) {
-    		System.out.println(e);
+    		e.printStackTrace();
+    		System.exit(1);
+    	}
+    	finally {
+    		try {
+    			if (clientSocket != null)
+    				clientSocket.close();
+    		}
+    		catch (Exception e) {
+    			e.printStackTrace();
+    			System.exit(1);
+    		}
     	}
     }
 }
