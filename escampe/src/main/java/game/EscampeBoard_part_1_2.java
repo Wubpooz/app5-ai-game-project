@@ -119,7 +119,7 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
 
   // =========== Validation ===========
   @Override
-  public ArrayList<EscampeMove> possibleMoves(PlayerColor playerRole) {
+  public List<EscampeMove> possibleMoves(PlayerColor playerRole) {
     String[] moves = possiblesMoves(playerRole);
     ArrayList<EscampeMove> result = new ArrayList<>();
     for (String m : moves) {
@@ -128,24 +128,19 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
     return result;
   }
 
-  @Override
-  public EscampeBoard_part_1_2 play(EscampeMove move, PlayerColor playerRole) {
+  public void play(EscampeMove move, PlayerColor playerRole) {
     play(move.getMove(), playerRole);
-    return this;
   }
 
-  @Override
   public boolean isValidMove(EscampeMove move, PlayerColor playerRole) {
     return isValidMove(move.getMove(), playerRole);
   }
 
-  @Override
   public boolean isGameOver() {
     return gameOver();
   }
 
-  @Override
-  public ArrayList<Score<PlayerColor>> getScores() {
+  public List<Score<PlayerColor>> getScores() {
     ArrayList<Score<PlayerColor>> scores = new ArrayList<>();
     boolean whiteUnicorn = false;
     boolean blackUnicorn = false;

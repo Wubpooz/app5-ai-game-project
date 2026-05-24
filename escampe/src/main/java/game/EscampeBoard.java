@@ -1,13 +1,9 @@
 package game;
 
-import java.io.*;
 import java.util.*;
-import java.util.regex.*;
 
 public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor, EscampeBoard> {
-
   private static final int SIZE = 6;
-
   private static final char EMPTY = '-';
   private static final char BLACK_UNICORN = 'N';
   private static final char BLACK_PALADIN = 'n';
@@ -35,57 +31,66 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   // '-' = empty, 'B'/'b' = white unicorn/paladin, 'N'/'n' = black unicorn/paladin
   private char[][] board = new char[SIZE][SIZE];
 
-  // Track which player has placed pieces (initial placement phase)
-  private boolean whitePlaced = false;
-  private boolean blackPlaced = false;
   // Track last move destination for liseret constraint
   private int lastMoveRow = -1;
   private int lastMoveCol = -1;
 
+
+  // Initialization
   public EscampeBoard() {
     initializeBoard();
   }
 
-
-  public void initializeBoard() { //TODO
-    for (char[] r : board) Arrays.fill(r, EMPTY);
-    whitePlaced = false;
-    blackPlaced = false;
+  public void initializeBoard() { 
+    for (char[] r : board) {
+      Arrays.fill(r, EMPTY);
+    }
     lastMoveRow = -1;
     lastMoveCol = -1;
+    //TODO generate initial positions? look at what the engine expects
   }
 
 
-  // =========== Validation ===========
-  @Override
-  public ArrayList<EscampeMove> possibleMoves(PlayerColor playerRole) {
-    String[] moves = possiblesMoves(playerRole);
-    ArrayList<EscampeMove> result = new ArrayList<>();
-    for (String m : moves) {
-      result.add(new EscampeMove(m));
+  // Play
+  public void play(EscampeMove move, PlayerColor playerRole) {
+    if (playerRole == null) return;
+
+    // Pass, reset lastMove so the opponent can freely choose their piece
+    if (move.getMove().equals("PASSE")) {
+      lastMoveRow = -1;
+      lastMoveCol = -1;
+    } else if (move.getMove().contains("/")) { // Initial placement
+      String[] parts = move.getMove().split("/");
+      char unicorn = (playerRole == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
+      char paladin = (playerRole == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
+      int colU = Character.toUpperCase(parts[0].charAt(0)) - 'A';
+      int rowU = parts[0].charAt(1) - '1';
+      board[rowU][colU] = unicorn;
+      int colP = -1;
+      int rowP = -1;
+      for (int i = 1; i < parts.length; i++) {
+        colP = Character.toUpperCase(parts[i].charAt(0)) - 'A';
+        rowP = parts[i].charAt(1) - '1';        
+        board[rowP][colP] = paladin;
+      }
+      lastMoveRow = -1;
+      lastMoveCol = -1;
+    } else { // Normal move
+      try {
+        board[move.getToRow()][move.getToCol()] = board[move.getFromRow()][move.getFromCol()];
+        board[move.getFromRow()][move.getFromCol()] = EMPTY;
+        lastMoveRow = move.getToRow();
+        lastMoveCol = move.getToCol();
+      } catch (IllegalArgumentException e) {
+        System.err.println("Invalid move format: " + move);
+      }
     }
-    return result;
   }
 
-  @Override
-  public EscampeBoard play(EscampeMove move, PlayerColor playerRole) {
-    play(move.getMove(), playerRole);
-    return this;
-  }
 
-  @Override
-  public boolean isValidMove(EscampeMove move, PlayerColor playerRole) {
-    return isValidMove(move.getMove(), playerRole);
-  }
-
+  // Game over: one player has no unicorn left
   @Override
   public boolean isGameOver() {
-    return gameOver();
-  }
-
-  @Override
-  public ArrayList<Score<PlayerColor>> getScores() {
-    ArrayList<Score<PlayerColor>> scores = new ArrayList<>();
     boolean whiteUnicorn = false;
     boolean blackUnicorn = false;
     for (int r = 0; r < SIZE; r++) {
@@ -94,102 +99,64 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
         if (board[r][c] == BLACK_UNICORN) blackUnicorn = true;
       }
     }
-    
-    if (!whiteUnicorn) {
-      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.LOOSE, 0));
-      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.WIN, 1));
-    } else if (!blackUnicorn) {
-      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.WIN, 1));
-      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.LOOSE, 0));
-    } else {
-      scores.add(new Score<>(PlayerColor.WHITE, Score.Status.TIE, 0));
-      scores.add(new Score<>(PlayerColor.BLACK, Score.Status.TIE, 0));
-    }
-    return scores;
+    return !whiteUnicorn || !blackUnicorn;
   }
 
-  public boolean isValidMove(String move, PlayerColor pc) {
-    if (gameOver()) return false;
-    if (pc == null || move == null) return false;
-    move = move.trim();
 
-    // Pass move
-    if (move.equals("E")) {
-      if (!isPlacementDone()) return false;
-      String[] pm = possiblesMoves(pc);
-      return pm.length == 1 && pm[0].equals("E");
-    }
 
-    // Initial placement: "C6/A6/B5/D5/E6/F5"
-    if (move.contains("/")) {
-      return isValidPlacement(move, pc);
-    }
+  // =========== Possible moves ===========
+  @Override
+  public List<EscampeMove> possibleMoves(PlayerColor playerRole) {
+    if (isGameOver()) return new ArrayList<>();
+    if (playerRole == null) return new ArrayList<>();
 
-    // Normal move: "B1-D1"
-    if (move.contains("-")) {
-      return isValidNormalMove(move, pc);
-    }
+    List<EscampeMove> moves = new ArrayList<>();
+    List<int[]> pieces = getPlayerPieces(playerRole);
 
-    return false;
-  }
-
-  private boolean isValidPlacement(String move, PlayerColor pc) {
-    // Can't place if already placed or white didn't place before black
-    if (pc == PlayerColor.WHITE && whitePlaced) return false;
-    if (pc == PlayerColor.BLACK && blackPlaced) return false;
-    if (pc == PlayerColor.WHITE && blackPlaced) return false;
-    if (pc == PlayerColor.BLACK && !whitePlaced) return false;
-
-    String[] parts = move.split("/");
-    if (parts.length != 6) return false;
-
-    int[][] coords = new int[SIZE][2];
-    Set<String> seen = new HashSet<>();
-    for (int i = 0; i < SIZE; i++) {
-      coords[i] = parseCell(parts[i]);
-      if (coords[i] == null) return false;
-      int r = coords[i][0];
-      int c = coords[i][1];
-      if (!seen.add(r + "," + c)) return false; // duplicate
-      if (board[r][c] != EMPTY) return false; // occupied
-      // White places on rows 01-02 (indices 0-1), Black on rows 05-06 (indices 4-5)
-      if (pc == PlayerColor.WHITE && r > 1) return false;
-      if (pc == PlayerColor.BLACK && r < 4) return false;
-    }
-    return true;
-  }
-
-  private boolean isValidNormalMove(String move, PlayerColor pc) {
-    if (!isPlacementDone()) return false;
-    String[] parts = move.split("-");
-    if (parts.length != 2) return false; // must be exactly one '-' to fit "from-to" format
-
-    int[] from = parseCell(parts[0]);
-    int[] to   = parseCell(parts[1]);
-    if (from == null || to == null) return false;
-
-    int fr = from[0], fc = from[1];
-    int tr = to[0],   tc = to[1];
-    if (fr == tr && fc == tc) return false;
-
-    char piece = board[fr][fc];
-    if (!belongsTo(piece, pc)) return false;
-
-    // Liseret constraint: piece must start from a cell whose liseret matches
-    // the opponent's last destination liseret
+    // Determine required liseret (from opponent's last move)
+    int requiredLiseret = -1;
     if (lastMoveRow >= 0) {
-      int requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
-      if (LISERET[fr][fc] != requiredLiseret) return false;
+      requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
     }
 
-    // Destination must be empty or enemy unicorn (only capture allowed)
-    char target = board[tr][tc];
-    if (target != EMPTY && belongsTo(target, pc)) return false;
-    if (target != EMPTY && !isUnicorn(target)) return false;
+    // Filter pieces that can move (liseret constraint)
+    List<int[]> movable = new ArrayList<>();
+    if (requiredLiseret < 0) {
+      movable.addAll(pieces); // no constraint, all pieces can move
+    } else {
+      for (int[] p : pieces) {
+        if (LISERET[p[0]][p[1]] == requiredLiseret) {
+          movable.add(p);
+        }
+      }
+    }
 
-    int dist = LISERET[fr][fc];
-    return canReach(fr, fc, tr, tc, dist, piece);
+    for (int[] p : movable) {
+      int fr = p[0];
+      int fc = p[1];
+      char piece = board[fr][fc];
+      int dist = LISERET[fr][fc];
+
+      // Try all destination cells: empty or enemy unicorn, reachable in `dist` steps
+      //TODO optimize by only checking cells within manhattan distance `dist` from (fr,fc)
+      for (int tr = 0; tr < SIZE; tr++) {
+        for (int tc = 0; tc < SIZE; tc++) {
+          if (tr == fr && tc == fc) continue;
+          char target = board[tr][tc];
+          if ((target == EMPTY || (isUnicorn(target) && !belongsTo(target, playerRole)))
+              && canReach(fr, fc, tr, tc, dist, piece)) {
+            moves.add(new EscampeMove(fr, fc, tr, tc));
+          }
+        }
+      }
+    }
+
+    if (moves.isEmpty()) {
+      moves.add(new EscampeMove("PASSE"));
+    }
+    return moves;
   }
+
 
   // DFS: can we reach (tr,tc) from (fr,fc) in exactly `dist` orthogonal steps,
   // without revisiting cells, without jumping over pieces (path must be clear except destination)
@@ -227,182 +194,10 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     return false;
   }
 
-  // =========== Possible moves ===========
-  public String[] possiblesMoves(PlayerColor pc) {
-    if (gameOver()) return new String[0];
-    if (pc == null) return new String[0];
 
-    // Placement phase
-    if (!isPlacementDone()) {
-      if (pc == PlayerColor.WHITE && !whitePlaced) return generatePlacements(pc, 0, 1);
-      if (pc == PlayerColor.BLACK && !blackPlaced && whitePlaced) return generatePlacements(pc, 4, 5);
-      return new String[0];
-    }
 
-    // Normal move phase
-    List<String> moves = new ArrayList<>();
-    List<int[]> pieces = getPlayerPieces(pc);
-
-    // Determine required liseret (from opponent's last move)
-    int requiredLiseret = -1;
-    if (lastMoveRow >= 0) {
-      requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
-    }
-
-    // Filter pieces that can move (liseret constraint)
-    List<int[]> movable = new ArrayList<>();
-    if (requiredLiseret < 0) {
-      movable.addAll(pieces); // no constraint, all pieces can move
-    } else {
-      for (int[] p : pieces) {
-        if (LISERET[p[0]][p[1]] == requiredLiseret) {
-          movable.add(p);
-        }
-      }
-    }
-
-    for (int[] p : movable) {
-      int fr = p[0];
-      int fc = p[1];
-      char piece = board[fr][fc];
-      int dist = LISERET[fr][fc];
-      // Try all destination cells: empty or enemy unicorn, reachable in `dist` steps
-      for (int tr = 0; tr < SIZE; tr++) {
-        for (int tc = 0; tc < SIZE; tc++) {
-          if (tr == fr && tc == fc) continue;
-          char target = board[tr][tc];
-          if (target != EMPTY && belongsTo(target, pc)) continue;
-          if (target != EMPTY && !isUnicorn(target)) continue;
-          if (canReach(fr, fc, tr, tc, dist, piece)) {
-            moves.add(cellToString(fr, fc) + "-" + cellToString(tr, tc));
-          }
-        }
-      }
-    }
-
-    if (moves.isEmpty()) {
-      moves.add("E");
-    }
-    return moves.toArray(new String[0]);
-  }
-
-  //TODO is this really useful?
-  private String[] generatePlacements(PlayerColor pc, int minRow, int maxRow) {
-    // Collect available cells in the player's two rows
-    List<int[]> cells = new ArrayList<>();
-    for (int r = minRow; r <= maxRow; r++) {
-      for (int c = 0; c < SIZE; c++) {
-        if (board[r][c] == EMPTY) cells.add(new int[]{r, c});
-      }
-    }
-    if (cells.size() < 6) return new String[0];
-
-    // Generate all C(n,6) combinations, first cell = unicorn, rest = paladins
-    List<String> result = new ArrayList<>();
-    int n = cells.size();
-    int[] indices = new int[6];
-    generateCombinations(cells, indices, 0, 0, n, result);
-    return result.toArray(new String[0]);
-  }
-
-  private void generateCombinations(List<int[]> cells, int[] indices, int start, int depth, int n, List<String> result) {
-    if (depth == 6) {
-      // indices[0] = unicorn position, indices[1..5] = paladin positions
-      // But any of the 6 could be the unicorn - actually the format is:
-      // first cell is unicorn, remaining 5 are paladins
-      // We need to try each of the 6 chosen cells as the unicorn
-      for (int u = 0; u < SIZE; u++) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(cellToString(cells.get(indices[u])[0], cells.get(indices[u])[1]));
-        for (int j = 0; j < SIZE; j++) {
-          if (j == u) continue;
-          sb.append('/').append(cellToString(cells.get(indices[j])[0], cells.get(indices[j])[1]));
-        }
-        result.add(sb.toString());
-      }
-      return;
-    }
-    for (int i = start; i < n; i++) {
-      indices[depth] = i;
-      generateCombinations(cells, indices, i + 1, depth + 1, n, result);
-    }
-  }
-
-  // =========== Play ===========
-  public void play(String move, PlayerColor pc) {
-    if (pc == null) return;
-    move = move.trim();
-
-    // Pass - reset lastMove so the opponent can freely choose their piece
-    if (move.equals("E")) {
-      lastMoveRow = -1;
-      lastMoveCol = -1;
-      return;
-    }
-
-    // Initial placement
-    if (move.contains("/")) {
-      String[] parts = move.split("/");
-      char unicorn = (pc == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
-      char paladin = (pc == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
-      int[] uc = parseCell(parts[0]);
-      if (uc != null) {
-        board[uc[0]][uc[1]] = unicorn;
-        for (int i = 1; i < parts.length; i++) {
-          int[] cell = parseCell(parts[i]);
-          if (cell != null) board[cell[0]][cell[1]] = paladin;
-        }
-        if (pc == PlayerColor.WHITE) whitePlaced = true;
-        else blackPlaced = true;
-      } else {
-        System.err.println("Invalid placement format: " + move);
-      }
-      lastMoveRow = -1;
-      lastMoveCol = -1;
-      return;
-    }
-
-    // Normal move
-    String[] parts = move.split("-");
-    int[] from = parseCell(parts[0]);
-    int[] to   = parseCell(parts[1]);
-    if (from != null && to != null) {
-      board[to[0]][to[1]] = board[from[0]][from[1]];
-      board[from[0]][from[1]] = EMPTY;
-      lastMoveRow = to[0];
-      lastMoveCol = to[1];
-    } else {
-      System.err.println("Invalid move format: " + move);
-    }
-  }
-
-  // =========== Game Over ===========
-  public boolean gameOver() {
-    if (!isPlacementDone()) return false;
-    boolean whiteUnicorn = false;
-    boolean blackUnicorn = false;
-    for (int r = 0; r < SIZE; r++) {
-      for (int c = 0; c < SIZE; c++) {
-        if (board[r][c] == WHITE_UNICORN) whiteUnicorn = true;
-        if (board[r][c] == BLACK_UNICORN) blackUnicorn = true;
-      }
-    }
-    return !whiteUnicorn || !blackUnicorn;
-  }
 
   // =========== Utils ===========
-  private int[] parseCell(String cell) {
-    if (cell == null || cell.length() != 2) return null;
-    int col = Character.toUpperCase(cell.charAt(0)) - 'A';
-    int row = cell.charAt(1) - '1';
-    if (col < 0 || col >= SIZE || row < 0 || row >= SIZE) return null;
-    return new int[]{row, col};
-  }
-
-  private String cellToString(int row, int col) {
-    return "" + (char)('A' + col) + (char)('1' + row);
-  }
-
   private boolean belongsTo(char piece, PlayerColor pc) {
     if (pc == PlayerColor.WHITE) return piece == WHITE_UNICORN || piece == WHITE_PALADIN;
     if (pc == PlayerColor.BLACK) return piece == BLACK_UNICORN || piece == BLACK_PALADIN;
@@ -419,35 +214,28 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     return aWhite == bWhite;
   }
 
-  private boolean isPlacementDone() {
-    return whitePlaced && blackPlaced;
-  }
-
-  private boolean hasPieces(PlayerColor pc) {
-    for (int r = 0; r < SIZE; r++)
-      for (int c = 0; c < SIZE; c++)
-        if (belongsTo(board[r][c], pc)) return true;
-    return false;
-  }
-
   private List<int[]> getPlayerPieces(PlayerColor pc) {
     List<int[]> pieces = new ArrayList<>();
     for (int r = 0; r < SIZE; r++)
       for (int c = 0; c < SIZE; c++)
-        if (belongsTo(board[r][c], pc)) pieces.add(new int[]{r, c});
+        if (belongsTo(board[r][c], pc)) {
+          pieces.add(new int[]{r, c});
+        }
     return pieces;
   }
 
-  /** Prints the board to stdout (rows 6->1, columns A->F) */
-  public void printBoard() {
-    System.out.println("  A B C D E F");
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("  A B C D E F\n");
     for (int r = SIZE - 1; r >= 0; r--) {
-      System.out.print((r + 1) + " ");
-      for (int c = 0; c < SIZE; c++) System.out.print(board[r][c] + " ");
-      System.out.println();
+      sb.append((r + 1)).append(" ");
+      for (int c = 0; c < SIZE; c++) sb.append(board[r][c]).append(" ");
+      sb.append("\n");
     }
     if (lastMoveRow >= 0)
-      System.out.println("  (last move landed on " + cellToString(lastMoveRow, lastMoveCol)
-          + ", liseret=" + LISERET[lastMoveRow][lastMoveCol] + ")");
+      sb.append("  (last move landed on ").append("(" + lastMoveRow + "," + lastMoveCol + ")")
+        .append(", liseret=").append(LISERET[lastMoveRow][lastMoveCol]).append(")\n");
+    return sb.toString();
   }
 }

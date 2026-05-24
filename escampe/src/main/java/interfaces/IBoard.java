@@ -1,7 +1,9 @@
 package interfaces;
 
-import java.util.ArrayList;
-import game.Score;
+import java.util.List;
+
+import game.EscampeMove;
+import game.PlayerColor;
 
 /**
  * Used to chararacterize the boards.he 
@@ -19,7 +21,7 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M, R,
 	 * @param playerRole
 	 * @return a list of all possible moves for the player having the playerRole
 	 */
-	ArrayList<M> possibleMoves(R playerRole);
+	List<M> possibleMoves(R playerRole);
 
 	/** play move on the board, played by a player having the playerRole  
 	 * 
@@ -27,27 +29,11 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M, R,
 	 * @param playerRole
 	 * @return the successor board
 	 */
-	B play(M move, R playerRole);
-
-	/**
-	 * checks that move is valid for the player having the playerRole
-	 * @param move
-	 * @param playerRole
-	 * @return yes if the move is valid for  playerRole
-	 */
-	boolean isValidMove(M move, R playerRole);
+	void play(M move, R playerRole);
 
 	/**
 	 * checks that the board corresponds to an end of game
 	 * @return yes if the game completed
 	 */
 	boolean isGameOver();
-
-
-	/**
-	 * returns the scores for each role (when the game is over)
-	 * @return
-	 */	
-	ArrayList<Score<R>> getScores();
-
 }

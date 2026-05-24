@@ -88,8 +88,8 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
     M bestMove = null;
     int bestValue = Integer.MIN_VALUE;
     for (M move : board.possibleMoves(playerRole)) {
-      B newBoard = board.play(move, playerRole);
-      int value = minValue(newBoard, playerMinRole, depthMax - 1);
+      board.play(move, playerRole);
+      int value = minValue(board, playerMinRole, depthMax - 1);
       if (value > bestValue) {
         bestValue = value;
         bestMove = move;
@@ -106,8 +106,8 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 
     int value = Integer.MIN_VALUE;
     for (M move : board.possibleMoves(playerRole)) {
-      B newBoard = board.play(move, playerRole);
-      value = Math.max(value, minValue(newBoard, playerMinRole, depth - 1));
+      board.play(move, playerRole);
+      value = Math.max(value, minValue(board, playerMinRole, depth - 1));
     }
     nbNodes++;
     return value;
@@ -121,8 +121,8 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 
     int value = Integer.MAX_VALUE;
     for (M move : board.possibleMoves(playerRole)) {
-      B newBoard = board.play(move, playerRole);
-      value = Math.min(value, maxValue(newBoard, playerMaxRole, depth - 1));
+      board.play(move, playerRole);
+      value = Math.min(value, maxValue(board, playerMaxRole, depth - 1));
     }
     nbNodes++;
     return value;
