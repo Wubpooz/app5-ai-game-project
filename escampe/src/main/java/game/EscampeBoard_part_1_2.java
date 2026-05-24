@@ -527,6 +527,19 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
           + ", liseret=" + LISERET[lastMoveRow][lastMoveCol] + ")");
   }
 
+  @Override
+  public EscampeBoard_part_1_2 copy() {
+    EscampeBoard_part_1_2 newBoard = new EscampeBoard_part_1_2();
+    for (int r = 0; r < SIZE; r++) {
+      System.arraycopy(this.board[r], 0, newBoard.board[r], 0, SIZE);
+    }
+    newBoard.whitePlaced = this.whitePlaced;
+    newBoard.blackPlaced = this.blackPlaced;
+    newBoard.lastMoveRow = this.lastMoveRow;
+    newBoard.lastMoveCol = this.lastMoveCol;
+    return newBoard;
+  }
+
   // =========== Main ===========
   public static void main(String[] args) throws Exception {
     testFileFormats();

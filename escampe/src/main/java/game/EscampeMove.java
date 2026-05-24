@@ -72,8 +72,8 @@ public class EscampeMove implements IMove {
   public void parseMove(String move) {
     String m = move.trim();
 
-    if (m.equals("PASSE")) {
-      this.fromRow = this.fromCol = this.toRow = this.toCol = -1; // Indicate a pass
+    if (m.equals("PASSE") || m.contains("/")) {
+      this.fromRow = this.fromCol = this.toRow = this.toCol = -1; // Indicate a pass or placement
       return;
     }
     String[] parts = m.split("-");

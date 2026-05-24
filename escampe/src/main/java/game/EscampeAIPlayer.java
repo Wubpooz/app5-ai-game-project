@@ -15,9 +15,13 @@ public class EscampeAIPlayer implements IJoueur {
 
 
   // Constructors
-	public EscampeAIPlayer(algorithms.GameAlgorithm<EscampeMove,PlayerColor,EscampeBoard> alg) {
-		this.ai = alg;
-	}
+  public EscampeAIPlayer() {
+    // Default constructor for reflection
+  }
+
+  public EscampeAIPlayer(algorithms.GameAlgorithm<EscampeMove,PlayerColor,EscampeBoard> alg) {
+    this.ai = alg;
+  }
 
   // Interface Methods
   /**
@@ -30,9 +34,10 @@ public class EscampeAIPlayer implements IJoueur {
     this.board = new EscampeBoard();
     this.board.initializeBoard();
 
-    // this.ai.setPlayerColor(this.role);
-    // this.ai.setOpponentColor(this.opponentRole);
-    // this.ai.init(this.board);
+    if (this.ai == null) {
+      interfaces.IHeuristic<EscampeBoard, PlayerColor> heuristic = new algorithms.evaluation.Heuristic();
+      this.ai = new algorithms.search.AlphaBeta<>(this.role, this.opponentRole, heuristic);
+    }
   }
 
   // Doit retourner l'argument passé par la fonction ci-dessus (constantes BLANC ou NOIR)

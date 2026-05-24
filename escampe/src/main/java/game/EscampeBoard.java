@@ -50,6 +50,11 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     //TODO generate initial positions? look at what the engine expects
   }
 
+  public char getPieceAt(int row, int col) {
+    if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return EMPTY;
+    return board[row][col];
+  }
+
 
   // Play
   public void play(EscampeMove move, PlayerColor playerRole) {
@@ -91,6 +96,9 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   // Game over: one player has no unicorn left
   @Override
   public boolean isGameOver() {
+    if (!hasPieces(PlayerColor.WHITE) || !hasPieces(PlayerColor.BLACK)) {
+      return false;
+    }
     boolean whiteUnicorn = false;
     boolean blackUnicorn = false;
     for (int r = 0; r < SIZE; r++) {
@@ -109,6 +117,23 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   public List<EscampeMove> possibleMoves(PlayerColor playerRole) {
     if (isGameOver()) return new ArrayList<>();
     if (playerRole == null) return new ArrayList<>();
+
+    // Placement phase check
+    if (!hasPieces(playerRole)) {
+      List<EscampeMove> placements = new ArrayList<>();
+      if (playerRole == PlayerColor.WHITE) {
+        // Recommend some solid placements from the opening book
+        placements.add(new EscampeMove("C1/A1/B2/D2/E2/F1"));
+        placements.add(new EscampeMove("C1/A2/B1/D2/E1/F2"));
+        placements.add(new EscampeMove("C1/A1/B2/D2/F2/E2"));
+      } else {
+        // Black placements mirrored to rows 5-6
+        placements.add(new EscampeMove("C6/A6/B5/D5/E5/F6"));
+        placements.add(new EscampeMove("C6/A5/B6/D5/E6/F5"));
+        placements.add(new EscampeMove("C6/A6/B5/D5/F5/E5"));
+      }
+      return placements;
+    }
 
     List<EscampeMove> moves = new ArrayList<>();
     List<int[]> pieces = getPlayerPieces(playerRole);
@@ -214,6 +239,15 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     return aWhite == bWhite;
   }
 
+  private boolean hasPieces(PlayerColor pc) {
+    for (int r = 0; r < SIZE; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        if (belongsTo(board[r][c], pc)) return true;
+      }
+    }
+    return false;
+  }
+
   private List<int[]> getPlayerPieces(PlayerColor pc) {
     List<int[]> pieces = new ArrayList<>();
     for (int r = 0; r < SIZE; r++)
@@ -222,6 +256,17 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
           pieces.add(new int[]{r, c});
         }
     return pieces;
+  }
+
+  @Override
+  public EscampeBoard copy() {
+    EscampeBoard newBoard = new EscampeBoard();
+    for (int r = 0; r < SIZE; r++) {
+      System.arraycopy(this.board[r], 0, newBoard.board[r], 0, SIZE);
+    }
+    newBoard.lastMoveRow = this.lastMoveRow;
+    newBoard.lastMoveCol = this.lastMoveCol;
+    return newBoard;
   }
 
   @Override

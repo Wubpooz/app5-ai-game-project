@@ -36,4 +36,10 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M, R,
 	 * @return yes if the game completed
 	 */
 	boolean isGameOver();
+
+	/**
+	 * Returns a deep copy of this board.
+	 * @return a deep copy of the board
+	 */
+	B copy();
 }
