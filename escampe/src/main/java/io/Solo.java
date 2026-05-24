@@ -5,6 +5,8 @@ import java.util.Date;
 
 import javax.swing.JFrame;
 
+import interfaces.IJoueur;
+
 /**
  * Petite Classe toute simple qui vous montre comment on peut lancer une partie sur deux IJoueurs...
  * Cela vous servira a debugger facilement votre projet en conditions presque reelles de tournoi

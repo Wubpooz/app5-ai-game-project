@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.StringTokenizer;
 
+import interfaces.IJoueur;
+
 /**
  * Cette classe permet de charger dynamiquement une classe de joueur, qui doit obligatoirement
  * implanter l'interface IJoueur. Vous lui donnez aussi en argument le nom de la machine distante
