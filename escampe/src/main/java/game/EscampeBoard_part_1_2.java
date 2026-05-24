@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
-public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor, EscampeBoard> {
+public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, PlayerColor, EscampeBoard_part_1_2> {
 
   private static final int SIZE = 6;
 
@@ -31,6 +31,14 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     { 0, -1 }
   };
 
+  // Numbered line – leading number required, trailing optional, flexible whitespace:
+  //   "01 nnN--- 01", "1 nnN---", "01  nnN---  06", "01\tnnN---"
+  private static final Pattern BOARD_LINE_NUM  = Pattern.compile("^(\\d{1,2})\\s+([NnBb-]{6})(?:\\s+\\d{1,2})?$");
+  // Bare line – just the 6 board characters, no numbers: "nnN---"
+  private static final Pattern BOARD_LINE_BARE = Pattern.compile("^([NnBb-]{6})$");
+  // e.g. "% lastMove: D4" – column letter case-insensitive
+  private static final Pattern LAST_MOVE_CMT   = Pattern.compile("^%\\s*lastMove:\\s*([A-Fa-f][1-6])$");
+
   // Board: board[row][col], row 0 = line 01 (bottom), col 0 = A
   // '-' = empty, 'B'/'b' = white unicorn/paladin, 'N'/'n' = black unicorn/paladin
   private char[][] board = new char[SIZE][SIZE];
@@ -42,19 +50,72 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   private int lastMoveRow = -1;
   private int lastMoveCol = -1;
 
-  public EscampeBoard() {
-    initializeBoard();
+  public EscampeBoard_part_1_2() {
+    for (char[] r : board) Arrays.fill(r, EMPTY);
   }
 
-
-  public void initializeBoard() { //TODO
+  // =========== File I/O ===========
+  public void setFromFile(String fileName) {
+    // Reset all state before loading
     for (char[] r : board) Arrays.fill(r, EMPTY);
-    whitePlaced = false;
-    blackPlaced = false;
     lastMoveRow = -1;
     lastMoveCol = -1;
+    try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+      String line;
+      int rowIdx = 0;
+      while ((line = br.readLine()) != null) {
+        line = line.trim();
+        if (line.isEmpty()) continue;
+        // Restore persisted lastMove before skipping other comment lines
+        Matcher lm = LAST_MOVE_CMT.matcher(line);
+        if (lm.matches()) {
+          int[] cell = parseCell(lm.group(1));
+          if (cell != null) { lastMoveRow = cell[0]; lastMoveCol = cell[1]; }
+          continue;
+        }
+        if (line.startsWith("%")) continue;
+        // Numbered line: "01 nnN--- 01", "1 nnN---", extra spaces OK
+        Matcher m = BOARD_LINE_NUM.matcher(line);
+        if (m.matches()) {
+          int fileRow = Integer.parseInt(m.group(1)) - 1; // 1-based in file -> 0-based
+          if (fileRow < 0 || fileRow >= SIZE) continue;
+          String boardPart = m.group(2);
+          for (int c = 0; c < SIZE; c++) board[fileRow][c] = boardPart.charAt(c);
+          rowIdx++;
+          continue;
+        }
+        // Bare line: "nnN---" (no row numbers) – use sequential counter
+        Matcher mb = BOARD_LINE_BARE.matcher(line);
+        if (mb.matches() && rowIdx < SIZE) {
+          String boardPart = mb.group(1);
+          for (int c = 0; c < SIZE; c++) board[rowIdx][c] = boardPart.charAt(c);
+          rowIdx++;
+        }
+      }
+      // Infer placement state from board content
+      whitePlaced = hasPieces(PlayerColor.WHITE);
+      blackPlaced = hasPieces(PlayerColor.BLACK);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to read board from: " + fileName, e);
+    }
   }
 
+  public void saveToFile(String fileName) {
+    try (PrintWriter pw = new PrintWriter(new FileWriter(fileName))) {
+      pw.println("% ABCDEF");
+      for (int r = 0; r < SIZE; r++) {
+        String rowNum = String.format("%02d", r + 1);
+        pw.println(rowNum + " " + new String(board[r]) + " " + rowNum);
+      }
+      // Persist lastMove so round-trips are lossless
+      if (lastMoveRow >= 0) {
+        pw.println("% lastMove: " + cellToString(lastMoveRow, lastMoveCol));
+      }
+      pw.println("% ABCDEF");
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to save board to: " + fileName, e);
+    }
+  }
 
   // =========== Validation ===========
   @Override
@@ -68,7 +129,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   }
 
   @Override
-  public EscampeBoard play(EscampeMove move, PlayerColor playerRole) {
+  public EscampeBoard_part_1_2 play(EscampeMove move, PlayerColor playerRole) {
     play(move.getMove(), playerRole);
     return this;
   }
@@ -106,6 +167,10 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       scores.add(new Score<>(PlayerColor.BLACK, Score.Status.TIE, 0));
     }
     return scores;
+  }
+
+  public boolean isValidMove(String move, String player) {
+    return isValidMove(move, parsePlayer(player));
   }
 
   public boolean isValidMove(String move, PlayerColor pc) {
@@ -228,6 +293,10 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   }
 
   // =========== Possible moves ===========
+  public String[] possiblesMoves(String player) {
+    return possiblesMoves(parsePlayer(player));
+  }
+
   public String[] possiblesMoves(PlayerColor pc) {
     if (gameOver()) return new String[0];
     if (pc == null) return new String[0];
@@ -329,6 +398,10 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   }
 
   // =========== Play ===========
+  public void play(String move, String player) {
+    play(move, parsePlayer(player));
+  }
+
   public void play(String move, PlayerColor pc) {
     if (pc == null) return;
     move = move.trim();
@@ -391,6 +464,14 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   }
 
   // =========== Utils ===========
+  private PlayerColor parsePlayer(String player) {
+    if (player == null) return null;
+    String normalized = player.trim().toLowerCase(Locale.ROOT);
+    if (normalized.equals("noir") || normalized.equals("black")) return PlayerColor.BLACK;
+    if (normalized.equals("blanc") || normalized.equals("white")) return PlayerColor.WHITE;
+    return null;
+  }
+
   private int[] parseCell(String cell) {
     if (cell == null || cell.length() != 2) return null;
     int col = Character.toUpperCase(cell.charAt(0)) - 'A';
@@ -450,4 +531,164 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       System.out.println("  (last move landed on " + cellToString(lastMoveRow, lastMoveCol)
           + ", liseret=" + LISERET[lastMoveRow][lastMoveCol] + ")");
   }
+
+  // =========== Main ===========
+  public static void main(String[] args) throws Exception {
+    testFileFormats();
+    testGameLogic();
+  }
+
+  private static void testGameLogic() {
+    // ---- Test 1: placement validation ----
+    System.out.println("=== Test 1: Placement ===");
+    EscampeBoard_part_1_2 b = new EscampeBoard_part_1_2();
+
+    String whitePlace = "C1/A1/B2/D2/E1/F2";
+    System.out.println("White placement valid:          " + b.isValidMove(whitePlace, "blanc")); // true
+    b.play(whitePlace, "blanc");
+    System.out.println("Black on row 1 (invalid):       " + b.isValidMove("C1/A5/B5/D5/E5/F5", "noir")); // false
+    String blackPlace = "C6/A6/B5/D5/E6/F5";
+    System.out.println("Black placement valid:          " + b.isValidMove(blackPlace, "noir")); // true
+    b.play(blackPlace, "noir");
+    b.printBoard();
+
+    // ---- Test 2: file round-trip (save then reload) ----
+    System.out.println("\n=== Test 2: File round-trip ===");
+    String tmpFile = System.getProperty("java.io.tmpdir") + File.separator + "escampe_test.txt";
+    b.play("C1-D1", "blanc"); // white moves, sets lastMove to D1 (liseret 3)
+    b.saveToFile(tmpFile);
+    System.out.println("Saved to: " + tmpFile);
+
+    EscampeBoard_part_1_2 b2 = new EscampeBoard_part_1_2();
+    b2.setFromFile(tmpFile);
+    // lastMove must survive the round-trip: noir must play from liseret matching D1
+    boolean lastMoveOk = b2.lastMoveRow == 0 && b2.lastMoveCol == 3; // D1 = row 0, col 3
+    System.out.println("lastMove preserved (D1, liseret=3): " + lastMoveOk); // true
+    System.out.println("gameOver after reload:              " + b2.gameOver()); // false
+
+    // ---- Test 3: intermediate board from PDF (figure 6) ----
+    // Noirs: licorne C1, paladins A1 B1 A6 C4 D4
+    // Blancs: licorne C6, paladins A4 C2 C5 F3 F6
+    // Noir just landed on D4 (liseret=2) -> blanc must play from a liseret-2 cell
+    System.out.println("\n=== Test 3: PDF intermediate board (figure 6) ===");
+    EscampeBoard_part_1_2 b3 = new EscampeBoard_part_1_2();
+    b3.play("C6/A4/C2/C5/F3/F6", "blanc");
+    b3.play("C1/A1/B1/A6/C4/D4", "noir");
+    b3.lastMoveRow = 3; b3.lastMoveCol = 3; // noir landed on D4
+    b3.printBoard();
+    System.out.println("White moves (must start on liseret-2 cell):");
+    for (String m : b3.possiblesMoves("blanc")) System.out.println("  " + m);
+    // C2 is at row 1 col 2 -> liseret[1][2] = 3, not 2 -> per PDF C2-D2-D1 path...
+    // (The PDF's actual capture line is C2xC1 via two steps; let's just verify the move list is non-empty)
+    System.out.println("gameOver: " + b3.gameOver()); // false
+
+    // ---- Test 4: pass move ----
+    System.out.println("\n=== Test 4: Pass move (E) ===");
+    EscampeBoard_part_1_2 b4 = new EscampeBoard_part_1_2();
+    // White on row 1 (liserets 1,2,2,3,1,2), noir unicorn on row 6
+    b4.play("A1/B1/C1/D1/E1/F1", "blanc");
+    b4.play("A6/B6/C6/D6/E6/F6", "noir");
+    b4.lastMoveRow = 5; b4.lastMoveCol = 0; // noir landed on A6, liseret 3 -> blanc must use liseret-3 piece
+    // Only D1 has liseret 3 on row 1, but B1/C1/F1 have liseret 2 etc.
+    String[] pm = b4.possiblesMoves("blanc");
+    System.out.println("White moves when forced to liseret-3: " + Arrays.toString(pm));
+    System.out.println("E valid:                              " + b4.isValidMove("E", "blanc"));
+    System.out.println("B1-C1 rejected (liseret 2 != 3):     " + !b4.isValidMove("B1-C1", "blanc")); // true
+  }
+  /** Tests that setFromFile handles all reasonable file formats */
+  private static void testFileFormats() throws Exception {
+    String tmp = System.getProperty("java.io.tmpdir") + File.separator;
+
+    // Format 1: standard "01 nnN--- 01"
+    writeFile(tmp + "f1.txt",
+        "% ABCDEF",
+        "01 b-B-b- 01",
+        "02 -b-b-- 02",
+        "03 ------ 03",
+        "04 ------ 04",
+        "05 -n-n-- 05",
+        "06 n-N-n- 06",
+        "% ABCDEF");
+
+    // Format 2: no trailing row number "01 nnN---"
+    writeFile(tmp + "f2.txt",
+        "% ABCDEF",
+        "01 b-B-b-",
+        "02 -b-b--",
+        "03 ------",
+        "04 ------",
+        "05 -n-n--",
+        "06 n-N-n-",
+        "% ABCDEF");
+
+    // Format 3: single-digit row numbers "1 nnN--- 1"
+    writeFile(tmp + "f3.txt",
+        "1 b-B-b- 1",
+        "2 -b-b-- 2",
+        "3 ------ 3",
+        "4 ------ 4",
+        "5 -n-n-- 5",
+        "6 n-N-n- 6");
+
+    // Format 4: bare lines, no numbers, many comments
+    writeFile(tmp + "f4.txt",
+        "% Game saved by player A",
+        "% Date: 2026-05-09",
+        "% Turn 12",
+        "b-B-b-",
+        "-b-b--",
+        "------",
+        "------",
+        "-n-n--",
+        "n-N-n-",
+        "% end of board");
+
+    // Format 5: extra spaces between fields
+    writeFile(tmp + "f5.txt",
+        "01  b-B-b-  01",
+        "02  -b-b--  02",
+        "03  ------  03",
+        "04  ------  04",
+        "05  -n-n--  05",
+        "06  n-N-n-  06");
+
+    // Format 6: lowercase column in lastMove comment
+    writeFile(tmp + "f6.txt",
+        "01 b-B-b- 01",
+        "02 -b-b-- 02",
+        "03 ------ 03",
+        "04 ------ 04",
+        "05 -n-n-- 05",
+        "06 n-N-n- 06",
+        "% lastMove: d4");   // lowercase
+
+    System.out.println("=== File format robustness ===");
+    String[] labels = {"standard", "no trailing num", "single-digit rows",
+                        "bare+many comments", "extra spaces", "lowercase lastMove"};
+    String[] files  = {tmp+"f1.txt", tmp+"f2.txt", tmp+"f3.txt",
+                        tmp+"f4.txt", tmp+"f5.txt", tmp+"f6.txt"};
+    boolean[] expectLastMove = {false, false, false, false, false, true};
+
+    boolean allOk = true;
+    for (int i = 0; i < files.length; i++) {
+      EscampeBoard_part_1_2 b = new EscampeBoard_part_1_2();
+      b.setFromFile(files[i]);
+      boolean hasWhite = b.hasPieces(PlayerColor.WHITE);
+      boolean hasBlack = b.hasPieces(PlayerColor.BLACK);
+      boolean lastMoveOk = !expectLastMove[i] || (b.lastMoveRow == 3 && b.lastMoveCol == 3); // D4
+      boolean ok = hasWhite && hasBlack && lastMoveOk;
+      allOk &= ok;
+      System.out.printf("  %-22s white=%-5b black=%-5b lastMoveOk=%-5b -> %s%n",
+          labels[i], hasWhite, hasBlack, lastMoveOk, ok ? "OK" : "FAIL");
+    }
+    System.out.println(allOk ? "All formats OK" : "SOME FORMATS FAILED");
+  }
+
+  private static void writeFile(String path, String... lines) throws Exception {
+    try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter(path))) {
+      for (String l : lines) pw.println(l);
+    }
+  }
+
+
 }
