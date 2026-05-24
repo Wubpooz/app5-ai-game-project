@@ -143,18 +143,15 @@ public class ClientJeu {
           		joueur.mouvementEnnemi(msgTokenizer.nextToken());
           	}
           } while (!jeuTermine);
-        }
-	    	
-    	catch (Exception e) {
+		}
+    	} catch (Exception e) {
     		e.printStackTrace();
     		System.exit(1);
-    	}
-    	finally {
+    	} finally {
     		try {
     			if (clientSocket != null)
     				clientSocket.close();
-    		}
-    		catch (Exception e) {
+    		} catch (Exception e) {
     			e.printStackTrace();
     			System.exit(1);
     		}
