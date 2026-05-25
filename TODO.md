@@ -175,7 +175,7 @@
   - `Long.bitCount(bitboard)` to count pieces, `Long.numberOfTrailingZeros(bitboard)` to find the index of the least significant piece, etc.
 - [ ] [Principal variation search](https://www.chessprogramming.org/Principal_Variation_Search) (PVS / NegaScout): an optimization of alpha-beta that assumes the first move is the best and searches it with a full window, while subsequent moves are searched with a null window (alpha, alpha+1). If a move fails high, we re-search it with a full window.
 
-- [ ] (Optional) Openning book
+- [x] (Optional) Openning book
   - Cover all three band types with your paladins => if all your pieces are on band-2 squares, opponent landing on band-1 forces you to pass immediately.
   - Unicorn on a double band (D1, C2) => not too mobile (triple = exposed), not too restricted (single = easy to trap).
   - Don't wall the unicorn => if paladins surround the unicorn on all 4 sides, they block its escape routes.

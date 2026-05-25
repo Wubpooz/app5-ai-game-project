@@ -46,7 +46,15 @@ public class EscampeAIPlayer implements IJoueur {
   }
 
   public String choixMouvement() {
-    return ai.bestMove(board, this.role).toString(); // TODO String msg = "" + positionInitiale + "-" +positionFinale + ""; ou "PASSE"; avec position.. = A1,B2
+    if (board.isGameOver()) {
+      return "xxxxx";
+    }
+    EscampeMove move = ai.bestMove(board, this.role);
+    if (move == null) {
+      return "xxxxx"; //TODO handle no moves available
+    }
+    board.play(move, this.role);
+    return move.toString();
   }
 
 

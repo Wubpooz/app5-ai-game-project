@@ -120,19 +120,10 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
 
     // Placement phase check
     if (!hasPieces(playerRole)) {
-      List<EscampeMove> placements = new ArrayList<>();
-      if (playerRole == PlayerColor.WHITE) {
-        // Recommend some solid placements from the opening book
-        placements.add(new EscampeMove("C1/A1/B2/D2/E2/F1"));
-        placements.add(new EscampeMove("C1/A2/B1/D2/E1/F2"));
-        placements.add(new EscampeMove("C1/A1/B2/D2/F2/E2"));
-      } else {
-        // Black placements mirrored to rows 5-6
-        placements.add(new EscampeMove("C6/A6/B5/D5/E5/F6"));
-        placements.add(new EscampeMove("C6/A5/B6/D5/E6/F5"));
-        placements.add(new EscampeMove("C6/A6/B5/D5/F5/E5"));
-      }
-      return placements;
+      boolean isWhite = (playerRole == PlayerColor.WHITE);
+      
+      // TODO Choose an opening from in ai player or here (at random maybe)
+      return algorithms.Opening.getOpeningsMoves(isWhite);
     }
 
     List<EscampeMove> moves = new ArrayList<>();
