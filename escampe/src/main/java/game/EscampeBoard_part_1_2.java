@@ -350,7 +350,7 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
     return moves.toArray(new String[0]);
   }
 
-  //TODO is this really useful?
+  // This helper generates all valid initial placement combinations during the placement phase.
   private String[] generatePlacements(PlayerColor pc, int minRow, int maxRow) {
     // Collect available cells in the player's two rows
     List<int[]> cells = new ArrayList<>();

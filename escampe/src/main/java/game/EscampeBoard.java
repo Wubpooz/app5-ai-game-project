@@ -1,6 +1,7 @@
 package game;
 
 import java.util.*;
+import algorithms.Opening;
 
 public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor, EscampeBoard> {
   private static final int SIZE = 6;
@@ -47,7 +48,8 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     }
     lastMoveRow = -1;
     lastMoveCol = -1;
-    //TODO generate initial positions? look at what the engine expects
+    // The board starts empty. Initial positions are generated dynamically
+    // during the placement phase (handled by possibleMoves and Opening).
   }
 
   public char getPieceAt(int row, int col) {
@@ -121,9 +123,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     // Placement phase check
     if (!hasPieces(playerRole)) {
       boolean isWhite = (playerRole == PlayerColor.WHITE);
-      
-      // TODO Choose an opening from in ai player or here (at random maybe)
-      return algorithms.Opening.getOpeningsMoves(isWhite);
+      return Opening.getOpeningsMoves(isWhite); // TODO Choose an opening from in ai player or here (at random maybe)
     }
 
     List<EscampeMove> moves = new ArrayList<>();
@@ -153,11 +153,19 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       char piece = board[fr][fc];
       int dist = LISERET[fr][fc];
 
-      // Try all destination cells: empty or enemy unicorn, reachable in `dist` steps
-      //TODO optimize by only checking cells within manhattan distance `dist` from (fr,fc)
-      for (int tr = 0; tr < SIZE; tr++) {
-        for (int tc = 0; tc < SIZE; tc++) {
+      // Optimize: Only check cells within the bounding box of radius `dist`
+      // that have correct Manhattan distance and parity
+      int minRow = Math.max(0, fr - dist);
+      int maxRow = Math.min(SIZE - 1, fr + dist);
+      int minCol = Math.max(0, fc - dist);
+      int maxCol = Math.min(SIZE - 1, fc + dist);
+
+      for (int tr = minRow; tr <= maxRow; tr++) {
+        for (int tc = minCol; tc <= maxCol; tc++) {
           if (tr == fr && tc == fc) continue;
+          int manhattan = Math.abs(tr - fr) + Math.abs(tc - fc);
+          if (manhattan > dist || (dist - manhattan) % 2 != 0) continue;
+
           char target = board[tr][tc];
           if ((target == EMPTY || (isUnicorn(target) && !belongsTo(target, playerRole)))
               && canReach(fr, fc, tr, tc, dist, piece)) {

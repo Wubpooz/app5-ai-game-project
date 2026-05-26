@@ -51,7 +51,7 @@ public class EscampeAIPlayer implements IJoueur {
     }
     EscampeMove move = ai.bestMove(board, this.role);
     if (move == null) {
-      return "xxxxx"; //TODO handle no moves available
+      return "xxxxx"; // Fallback to indicate end of game
     }
     board.play(move, this.role);
     return move.toString();
@@ -69,7 +69,6 @@ public class EscampeAIPlayer implements IJoueur {
 
 
   public void declareLeVainqueur(int colour) {
-    //TODO
     if (colour == this.getNumJoueur()) {
       System.out.println("I win!");
     } else {
