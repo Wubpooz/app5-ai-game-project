@@ -4,7 +4,7 @@ import interfaces.IMove;
 
 public class EscampeMove implements IMove {
   private int fromRow, fromCol, toRow, toCol;
-  private String move; // format "A1-B2" or "PASSE" or "C6/A6/B5/D5/E6/F5"
+  private String move; // format "A1-B2" or "E" or "C6/A6/B5/D5/E6/F5"
   // private final int moveType; // 0 = normal move, 1 = placement, 2 = pass
 
   public EscampeMove(String move) {
@@ -72,7 +72,7 @@ public class EscampeMove implements IMove {
   public void parseMove(String move) {
     String m = move.trim();
 
-    if (m.equals("PASSE") || m.contains("/")) {
+    if ( m.equals("E") || m.contains("/")) {
       this.fromRow = this.fromCol = this.toRow = this.toCol = -1; // Indicate a pass or placement
       return;
     }
@@ -104,7 +104,7 @@ public class EscampeMove implements IMove {
   //   if (playerRole == null || move == null) return false;
 
   //   // Pass move
-  //   if (move.getMove().equals("PASSE")) {
+  //   if (move.getMove().equals("E")) {
   //     return true; // Pass is always valid
   //   }
 

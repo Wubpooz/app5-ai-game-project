@@ -50,7 +50,7 @@ Server sends one of three message types:
 Message: "JOUEUR <BLANC|NOIR>"
 Our code:
   - Calls choixMouvement() on your IJoueur
-  - Sends back move: "A1-B2" or "PASSE"
+  - Sends back move: "A1-B2" or "E"
 ```
 
 **B) Opponent's Move Notification**

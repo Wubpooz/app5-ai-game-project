@@ -49,10 +49,11 @@ public class EscampeAIPlayer implements IJoueur {
     if (board.isGameOver()) {
       return "xxxxx";
     }
-    EscampeMove move = ai.bestMove(board, this.role);
+    EscampeMove move = ai.bestMove(board, this.role); // E is the pass move
     if (move == null) {
       return "xxxxx"; // Fallback to indicate end of game
     }
+    
     board.play(move, this.role);
     return move.toString();
   }

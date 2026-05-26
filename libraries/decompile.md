@@ -28,7 +28,7 @@ String c()                → String binoName()
 
 1. **Implement `IJoueur` interface** in your own class (e.g., `MyAIPlayer.java`)
 2. **Implement all 6 methods**, especially:
-   - `choixMouvement()` - returns your AI's move as a string like `"A1-B2"` or `"PASSE"`
+   - `choixMouvement()` - returns your AI's move as a string like `"A1-B2"` or `"E"`
    - `mouvementEnnemi()` - updates your internal board state when opponent moves
 3. **Launch with:**
    ```bash

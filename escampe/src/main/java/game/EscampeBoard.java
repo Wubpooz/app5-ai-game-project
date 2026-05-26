@@ -63,7 +63,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     if (playerRole == null) return;
 
     // Pass, reset lastMove so the opponent can freely choose their piece
-    if (move.getMove().equals("PASSE")) {
+    if (move.getMove().equals("E")) {
       lastMoveRow = -1;
       lastMoveCol = -1;
     } else if (move.getMove().contains("/")) { // Initial placement

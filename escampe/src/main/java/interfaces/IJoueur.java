@@ -34,7 +34,7 @@ public interface IJoueur {
      * plateau courant.
      * 
      * @return une chaine décrivant le mouvement. Cette chaine doit être décrite exactement comme
-     *         sur l'exemple : String msg = "" + positionInitiale + "-" +positionFinale + ""; ou "PASSE";
+     *         sur l'exemple : String msg = "" + positionInitiale + "-" +positionFinale + ""; ou "E";
      *          Chaque position contient une lettre et un num?ro, par exemple:A1,B2 (coup "A1-B2")
      */
     public String choixMouvement();
