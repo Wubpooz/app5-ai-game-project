@@ -49,7 +49,8 @@ run_in_terminal() {
     elif command -v gnome-terminal &>/dev/null; then
         gnome-terminal --title="$title" -- bash -c "cd '$ROOT_DIR' && $color_cmd || { read -p 'Press Enter to exit...'; }"
     elif command -v xterm &>/dev/null; then
-        xterm -T "$title" -e "bash -c \"cd '$ROOT_DIR' && $color_cmd || { read -p 'Press Enter to exit...'; }\"" &
+        # xterm -T "$title" -e "bash -c \"cd '$ROOT_DIR' && $color_cmd || { read -p 'Press Enter to exit...'; }\"" &
+        xterm -T "$title" -e "bash -c \"cd '$ROOT_DIR'; $cmd;\"" &
     else
         # Fallback: run in background and log to a file
         local logfile="$ROOT_DIR/$(echo "$title" | tr ' ' '_').log"
