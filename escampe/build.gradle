@@ -18,7 +18,7 @@ java {
 }
 
 application {
-    mainClass.set("ranking.TournamentRunner") //TODO
+    mainClass.set("io.ClientJeu")
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -27,8 +27,8 @@ tasks.withType(JavaCompile).configureEach {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'ranking.TournamentRunner'
-    } //TODO
+        attributes 'Main-Class': 'io.ClientJeu'
+    }
 }
 
 // Create a fat (uber) JAR containing dependencies for easy distribution
@@ -36,8 +36,8 @@ task fatJar(type: Jar) {
     archiveBaseName = project.name + '-all'
     archiveClassifier = ''
     manifest {
-        attributes 'Main-Class': 'ranking.TournamentRunner'
-    } //TODO
+        attributes 'Main-Class': 'io.ClientJeu'
+    }
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
