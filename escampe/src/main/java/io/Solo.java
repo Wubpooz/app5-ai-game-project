@@ -7,6 +7,8 @@ import javax.swing.JFrame;
 
 import interfaces.IJoueur;
 
+import game.EscampeAIPlayer;
+
 /**
  * Petite Classe toute simple qui vous montre comment on peut lancer une partie sur deux IJoueurs...
  * Cela vous servira a debugger facilement votre projet en conditions presque reelles de tournoi
@@ -53,7 +55,7 @@ public class Solo {
     	System.out.println(s + " : defaultPlayer");
     	// vous devez faire qq chose comme return new MonMeilleurJoueur();
     	// return new JoueurAleatoire();
-      return null;
+		return new EscampeAIPlayer();
     }
     
     /**

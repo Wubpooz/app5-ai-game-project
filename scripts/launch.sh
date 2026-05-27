@@ -7,8 +7,8 @@ set -euo pipefail
 MODE="${1:-interactive}"
 PORT="${2:-1234}"
 GAMES="${3:-1}"
-PLAYER_CLASS="${4:-game.AIPlayer}"
-OPPONENT_CLASS="${5:-game.AIPlayer}"
+PLAYER_CLASS="${4:-game.EscampeAIPlayer}"
+OPPONENT_CLASS="${5:-game.EscampeAIPlayer}"
 
 # Resolve directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
