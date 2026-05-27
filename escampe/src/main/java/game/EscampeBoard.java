@@ -123,7 +123,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     // Placement phase check
     if (!hasPieces(playerRole)) {
       boolean isWhite = (playerRole == PlayerColor.WHITE);
-      return Opening.getOpeningsMoves(isWhite); // TODO Choose an opening from in ai player or here (at random maybe)
+      return Opening.getOpeningsMoves(isWhite);
     }
 
     List<EscampeMove> moves = new ArrayList<>();
@@ -150,75 +150,71 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     for (int[] p : movable) {
       int fr = p[0];
       int fc = p[1];
-      char piece = board[fr][fc];
       int dist = LISERET[fr][fc];
 
-      // Optimize: Only check cells within the bounding box of radius `dist`
-      // that have correct Manhattan distance and parity
-      int minRow = Math.max(0, fr - dist);
-      int maxRow = Math.min(SIZE - 1, fr + dist);
-      int minCol = Math.max(0, fc - dist);
-      int maxCol = Math.min(SIZE - 1, fc + dist);
-
-      for (int tr = minRow; tr <= maxRow; tr++) {
-        for (int tc = minCol; tc <= maxCol; tc++) {
-          if (tr == fr && tc == fc) continue;
-          int manhattan = Math.abs(tr - fr) + Math.abs(tc - fc);
-          if (manhattan > dist || (dist - manhattan) % 2 != 0) continue;
-
-          char target = board[tr][tc];
-          if ((target == EMPTY || (isUnicorn(target) && !belongsTo(target, playerRole)))
-              && canReach(fr, fc, tr, tc, dist, piece)) {
-            moves.add(new EscampeMove(fr, fc, tr, tc));
-          }
-        }
+      long mask = getReachableMask(fr, fc, dist, playerRole); // bitboard mask
+      while (mask != 0) {
+        int bitIndex = Long.numberOfTrailingZeros(mask);
+        int tr = bitIndex / SIZE;
+        int tc = bitIndex % SIZE;
+        moves.add(new EscampeMove(fr, fc, tr, tc));
+        mask &= mask - 1; // clear lowest set bit
       }
     }
 
     if (moves.isEmpty()) {
-      moves.add(new EscampeMove("PASSE"));
+      moves.add(new EscampeMove("E"));
     }
     return moves;
   }
 
-
-  // DFS: can we reach (tr,tc) from (fr,fc) in exactly `dist` orthogonal steps,
-  // without revisiting cells, without jumping over pieces (path must be clear except destination)
-  private boolean canReach(int fr, int fc, int tr, int tc, int dist, char piece) {
-    // Temporarily remove the moving piece so it doesn't block its own path
-    char saved = board[fr][fc];
-    board[fr][fc] = EMPTY;
-    boolean result = dfsReach(fr, fc, tr, tc, dist, new boolean[SIZE][SIZE], piece);
-    board[fr][fc] = saved;
-    return result;
+  // Generate all reachable cells in exactly `dist` orthogonal steps
+  // returning a 64-bit mask of (r * SIZE + c) coordinates.
+  private long getReachableMask(int fr, int fc, int dist, PlayerColor playerRole) {
+    long visited = 1L << (fr * SIZE + fc); // mark starting cell as visited
+    return findReachableCells(fr, fc, dist, visited, playerRole);
   }
 
-  private boolean dfsReach(int r, int c, int tr, int tc, int steps, boolean[][] visited, char piece) {
-    if (steps == 0) return r == tr && c == tc;
-    // Pruning: Manhattan distance must be reachable in remaining steps with same parity
-    int manhattan = Math.abs(tr - r) + Math.abs(tc - c);
-    if (manhattan > steps || (steps - manhattan) % 2 != 0) return false;
+  /**
+   * Recursive DFS to find reachable cells at exact distance, respecting move rules.
+   * @param r row of current cell
+   * @param c col of current cell
+   * @param steps remaining steps to reach destination
+   * @param visited bitmask of visited cells to prevent cycles
+   * @param playerRole current player's role for move legality checks
+   * @return bitmask of reachable destination cells at exact distance
+   */
+  private long findReachableCells(int r, int c, int steps, long visited, PlayerColor playerRole) {
+    if (steps == 0) { // base case: check if current cell is a valid destination
+      char target = board[r][c];
+      if (target == EMPTY || (isUnicorn(target) && !belongsTo(target, playerRole))) {
+        return 1L << (r * SIZE + c); // valid destination
+      }
+      return 0L;
+    }
 
-    visited[r][c] = true;
+    long mask = 0L;
     for (int[] dir : DIRECTIONS) {
       int nr = r + dir[0];
       int nc = c + dir[1];
-      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
-      if (visited[nr][nc]) continue;
-      // Intermediate cells must be empty; destination can be empty or enemy unicorn
-      if (steps > 1 && board[nr][nc] != EMPTY) continue;
-      if (steps == 1 && board[nr][nc] != EMPTY && (!isUnicorn(board[nr][nc]) || sameColor(board[nr][nc], piece))) continue;
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue; // out of bounds
+      long bit = 1L << (nr * SIZE + nc);
+      if ((visited & bit) != 0) continue; // already visited
 
-      if (dfsReach(nr, nc, tr, tc, steps - 1, visited, piece)) {
-        visited[r][c] = false;
-        return true;
+      if (steps > 1) {
+        if (board[nr][nc] != EMPTY) continue; // Intermediate cells must be empty
+      } else {
+        // Final step destination check
+        char target = board[nr][nc];
+        if (target != EMPTY && (!isUnicorn(target) || belongsTo(target, playerRole))) {
+          continue;
+        }
       }
+
+      mask |= findReachableCells(nr, nc, steps - 1, visited | bit, playerRole); // mark cell as visited with an OR operation
     }
-    visited[r][c] = false;
-    return false;
+    return mask;
   }
-
-
 
 
   // =========== Utils ===========
@@ -230,12 +226,6 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
 
   private boolean isUnicorn(char piece) {
     return piece == WHITE_UNICORN || piece == BLACK_UNICORN;
-  }
-
-  private boolean sameColor(char a, char b) {
-    boolean aWhite = (a == WHITE_UNICORN || a == WHITE_PALADIN);
-    boolean bWhite = (b == WHITE_UNICORN || b == WHITE_PALADIN);
-    return aWhite == bWhite;
   }
 
   private boolean hasPieces(PlayerColor pc) {

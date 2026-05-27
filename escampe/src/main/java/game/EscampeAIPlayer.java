@@ -28,7 +28,7 @@ public class EscampeAIPlayer implements IJoueur {
    * @param mycolour La couleur dans laquelle vous allez jouer (-1=BLANC, 1=NOIR)
   */
   public void initJoueur(int mycolour) {
-    this.role = (mycolour == PlayerColor.WHITE.getValue()) ? PlayerColor.WHITE : PlayerColor.BLACK;
+    this.role = (mycolour == -1) ? PlayerColor.WHITE : PlayerColor.BLACK;
     this.opponentRole = (this.role == PlayerColor.WHITE) ? PlayerColor.BLACK : PlayerColor.WHITE;
     
     this.board = new EscampeBoard();
@@ -42,14 +42,16 @@ public class EscampeAIPlayer implements IJoueur {
 
   // Doit retourner l'argument passé par la fonction ci-dessus (constantes BLANC ou NOIR)
   public int getNumJoueur() {
-    return this.role.getValue();
+    return (this.role == PlayerColor.WHITE) ? -1 : 1;
   }
 
   public String choixMouvement() {
     if (board.isGameOver()) {
       return "xxxxx";
     }
-    EscampeMove move = ai.bestMove(board, this.role); // E is the pass move
+    // TODO Choose an opening here or in board (at random maybe)
+    // E is the pass move, present in board.possibleMoves() when no placements/moves are available
+    EscampeMove move = ai.bestMove(board, this.role);
     if (move == null) {
       return "xxxxx"; // Fallback to indicate end of game
     }
