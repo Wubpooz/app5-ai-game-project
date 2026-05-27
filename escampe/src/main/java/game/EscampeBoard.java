@@ -52,13 +52,36 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     // during the placement phase (handled by possibleMoves and Opening).
   }
 
+  // =========== Getters ===========
   public char getPieceAt(int row, int col) {
     if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return EMPTY;
     return board[row][col];
   }
 
+  public char[][] getBoardState() {
+    char[][] copy = new char[SIZE][SIZE];
+    for (int r = 0; r < SIZE; r++) {
+      System.arraycopy(board[r], 0, copy[r], 0, SIZE);
+    }
+    return copy;
+  }
 
-  // Play
+  public int getLastMoveRow() {
+    return lastMoveRow;
+  }
+
+  public int getLastMoveCol() {
+    return lastMoveCol;
+  }
+
+  public int getLiseretAt(int row, int col) {
+    if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return -1;
+    return LISERET[row][col];
+  }
+
+
+
+  // =========== Play ===========
   public void play(EscampeMove move, PlayerColor playerRole) {
     if (playerRole == null) return;
 
@@ -217,6 +240,54 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   }
 
 
+  //  Helper Unicorn move generator
+  public List<EscampeMove> possibleMovesForUnicorn(PlayerColor playerRole) {
+    if (isGameOver()) return new ArrayList<>();
+    if (playerRole == null) return new ArrayList<>();
+
+    // Placement phase check
+    if (!hasPieces(playerRole)) {
+      boolean isWhite = (playerRole == PlayerColor.WHITE);
+      return Opening.getOpeningsMoves(isWhite);
+    }
+
+    List<EscampeMove> moves = new ArrayList<>();
+    int[] unicornPos = getUnicornPosition(playerRole);
+    if (unicornPos == null || unicornPos[0] == -1 || unicornPos[1] == -1) return moves; // should not happen if game is not over
+
+
+    // Determine required liseret (from opponent's last move)
+    int requiredLiseret = -1;
+    if (lastMoveRow >= 0) {
+      requiredLiseret = LISERET[lastMoveRow][lastMoveCol];
+    }
+
+
+    if (requiredLiseret >= 0 && LISERET[unicornPos[0]][unicornPos[1]] != requiredLiseret) {
+      return moves; // unicorn cannot move due to liseret constraint
+    }
+
+    int fr = unicornPos[0];
+    int fc = unicornPos[1];
+    int dist = LISERET[fr][fc];
+
+    long mask = getReachableMask(fr, fc, dist, playerRole); // bitboard mask
+    while (mask != 0) {
+      int bitIndex = Long.numberOfTrailingZeros(mask);
+      int tr = bitIndex / SIZE;
+      int tc = bitIndex % SIZE;
+      moves.add(new EscampeMove(fr, fc, tr, tc));
+      mask &= mask - 1; // clear lowest set bit
+    }
+
+    if (moves.isEmpty()) {
+      moves.add(new EscampeMove("E"));
+    }
+    return moves;
+}
+
+
+
   // =========== Utils ===========
   private boolean belongsTo(char piece, PlayerColor pc) {
     if (pc == PlayerColor.WHITE) return piece == WHITE_UNICORN || piece == WHITE_PALADIN;
@@ -235,6 +306,18 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       }
     }
     return false;
+  }
+
+  public int[] getUnicornPosition(PlayerColor pc) {
+    char unicornChar = (pc == PlayerColor.WHITE) ? WHITE_UNICORN : BLACK_UNICORN;
+    for (int r = 0; r < SIZE; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        if (board[r][c] == unicornChar) {
+          return new int[]{r, c};
+        }
+      }
+    }
+    return new int[]{-1, -1}; // should not happen if game is not over
   }
 
   private List<int[]> getPlayerPieces(PlayerColor pc) {

@@ -110,7 +110,7 @@
 - [ ] [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic): keep track of the best moves that caused beta cutoffs at each depth and try them first in future searches at the same depth.
 
 ## Heuristics
-- [ ] Evaluation function: $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
+- [x] Evaluation function: $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
   - Band-aware distance: BFS ply distance search instead of Manhattan distance
   - $\mathcal{BC}$: landing on a 1-band square is bad for the opponent, landing on a 3-band square is good for the opponent. Low bands are good when ahead, high bands are good when behind.
   - $\mathcal{T}$: penality when few legal moves for us, reward when few legal moves for opponent.

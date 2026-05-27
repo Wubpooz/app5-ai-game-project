@@ -15,4 +15,8 @@ public enum PlayerColor implements interfaces.IRole {
   public int getValue() {
     return value;
   }
+
+  public PlayerColor getOpponent() {
+    return this == BLACK ? WHITE : BLACK;
+  }
 }
