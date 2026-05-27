@@ -110,11 +110,14 @@
 - [ ] [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic): keep track of the best moves that caused beta cutoffs at each depth and try them first in future searches at the same depth.
 
 ## Heuristics
-- [x] Evaluation function: $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
-  - Band-aware distance: BFS ply distance search instead of Manhattan distance
-  - $\mathcal{BC}$: landing on a 1-band square is bad for the opponent, landing on a 3-band square is good for the opponent. Low bands are good when ahead, high bands are good when behind.
-  - $\mathcal{T}$: penality when few legal moves for us, reward when few legal moves for opponent.
-  - Unicorn escapability: number of legal moves for the unicorn of the opponent in 1-2 moves.
+- [x] Evaluation function: $\displaystyle{-w_1\min_{p\in P}{(d^{\text{atk}}_{p})} - w_2\,\text{avg}_{p\in P}(d^{\text{atk}}_{p}) + w_3\min_{e\in E}{(d^{\text{def}}_{e})} + w_4\,\text{avg}_{e\in E}(d^{\text{def}}_{e}) + w_5\,\mathcal{E_{\text{us}}} - w_6\,\mathcal{E_{\text{opp}}} + w_7 \mathcal{BC} + w_8 \mathcal{T}}$
+  - Attack distance: Manhattan distance from our paladins to the opponent's unicorn (min and avg, closer is better)
+  - Defense distance: Manhattan distance from opponent's paladins to our unicorn (min and avg, farther is better)
+  - $\mathcal{E_{\text{us}}}$: unicorn escapability — number of legal moves for our unicorn (more = safer)
+  - $\mathcal{E_{\text{opp}}}$: opponent unicorn escapability — number of legal moves for opponent's unicorn (fewer = better, opponent trapped)
+  - $\mathcal{BC}$: band control — our paladins on 1-band squares is good, opponent's paladins on 3-band squares is good for us
+  - $\mathcal{T}$: mobility/pass pressure — reward for our legal moves, penalty for opponent's legal moves, large penalty when we must pass, reward when opponent must pass
+  - TODO: Band-aware distance (BFS ply distance) instead of Manhattan distance
 
 - [ ] Time management: 
   - Spend more time in complex midgame positions (high branching factor, many legal moves).
