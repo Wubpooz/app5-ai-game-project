@@ -139,15 +139,14 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     // Band control score
     for (int i = 0; i < paladinCount; i++) {
       int band = paladinPositionsBand[i][2];
-      if (band == 1) score += config.weightBandControl; // controlling a 1-band square is good
-      else if (band == 3) score -= config.weightBandControl; // controlling a 3-band square is bad
+      if (band == 1) score -= config.weightBandControl; // our piece on 1-band = restricted mobility = bad
+      else if (band == 3) score += config.weightBandControl; // our piece on 3-band = high mobility = good
     }
     for (int i = 0; i < oppPaladinCount; i++) {
       int band = oppPaladinPositionsBand[i][2];
-      if (band == 1) score -= config.weightOppBandControl; // opponent controlling a 1-band square is bad for us
-      else if (band == 3) score += config.weightOppBandControl; // opponent controlling a 3-band square is good for us
+      if (band == 1) score += config.weightOppBandControl; // opponent on 1-band = they're restricted = good for us
+      else if (band == 3) score -= config.weightOppBandControl; // opponent on 3-band = they're mobile = bad for us
     }
-    //TODO maybe add the check of wheter the band control is actually restricting the opponent movements
 
     // Unicorn escapability score
     score += myUnicornEscapability * config.weightEscapability; // more escape routes for our unicorn = good
