@@ -8,13 +8,13 @@ import interfaces.IHeuristic;
 
 /**
  * Basic heuristic evaluation function for Escampe. Evaluates the board state from the perspective of the given player color.
- * $\displaystyle{w_1\min_{p\in P}{(d_{p})} + w_2\,\text{avg}_{p\in P}(d_{p}) + w_3\,\mathcal{S_l} + w_4\sum_{e \in (P \wedge l)} \text{moves}(e) + w_5 \mathcal{BC} + w_6 \mathcal{T}}$
+ * $\displaystyle{-w_1\min_{p\in P}{(d^{atk}_{p})} - w_2\,\text{avg}_{p\in P}(d^{atk}_{p}) + w_3\min_{e\in E}{(d^{def}_{e})} + w_4\,\text{avg}_{e\in E}(d^{def}_{e}) + w_5\,\mathcal{E_{us}} - w_6\,\mathcal{E_{opp}} + w_7 \mathcal{BC} + w_8 \mathcal{T}}$
  * The heuristic considers:
- * - The distance (min and average) of our paladins to the opponent's unicorn (closer is better)
- * - The distance of opponent's paladins to our unicorn (closer is worse) either in manhattan distance or band-aware distance (BFS ply distance)
- * - Unicorn escapability: number of legal moves for the unicorn of the opponent in 1-2 moves.
- * - $\mathcal{BC}$: landing on a 1-band square is bad for the opponent, landing on a 3-band square is good for the opponent. Low bands are good when ahead, high bands are good when behind.
- * - $\mathcal{T}$: penality when few legal moves for us, reward when few legal moves for opponent.
+ * - Attack distance: Manhattan distance (min and avg) of our paladins to the opponent's unicorn (closer is better)
+ * - Defense distance: Manhattan distance (min and avg) of opponent's paladins to our unicorn (farther is better)
+ * - Unicorn escapability: number of legal moves for our unicorn (more = safer), fewer for opponent (= trapped)
+ * - $\mathcal{BC}$: band control — our paladins on 1-band squares is good, opponent's on 3-band squares is good for us
+ * - $\mathcal{T}$: mobility/pass pressure — our legal moves good, opponent legal moves bad, pass penalties
  * - Win/loss states (if our unicorn is captured, very bad and if opponent's unicorn is captured, very good)
  */
 public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
@@ -103,25 +103,21 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     int oppUnicornEscapability = board.possibleMovesForUnicorn(role.getOpponent()).size();
 
 
-    // Calculate distances of paladins to opponent unicorn and opponent paladins to our unicorn
+    // Calculate distances using already-collected paladin positions (no second board scan)
     int minMyDist = Integer.MAX_VALUE;
     int minOppDist = Integer.MAX_VALUE;
     int sumMyDist = 0;    
     int sumOppDist = 0;
 
-    for (int r = 0; r < SIZE; r++) {
-      for (int c = 0; c < SIZE; c++) {
-        char piece = board.getPieceAt(r, c);
-        if (piece == myPaladinChar) {
-          int d = Math.abs(r - oppUnicornRow) + Math.abs(c - oppUnicornCol); // Manhattan distance, raw but faster
-          sumMyDist += d;
-          if (d < minMyDist) minMyDist = d;
-        } else if (piece == oppPaladinChar) {
-          int d = Math.abs(r - myUnicornRow) + Math.abs(c - myUnicornCol); // Manhattan distance, raw but faster
-          sumOppDist += d;
-          if (d < minOppDist) minOppDist = d;
-        }
-      }
+    for (int i = 0; i < paladinCount; i++) {
+      int d = Math.abs(paladinPositionsBand[i][0] - oppUnicornRow) + Math.abs(paladinPositionsBand[i][1] - oppUnicornCol);
+      sumMyDist += d;
+      if (d < minMyDist) minMyDist = d;
+    }
+    for (int i = 0; i < oppPaladinCount; i++) {
+      int d = Math.abs(oppPaladinPositionsBand[i][0] - myUnicornRow) + Math.abs(oppPaladinPositionsBand[i][1] - myUnicornCol);
+      sumOppDist += d;
+      if (d < minOppDist) minOppDist = d;
     }
 
 
@@ -158,8 +154,8 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     //TODO maybe add the check of wheter the band control is actually restricting the opponent movements
 
     // Unicorn escapability score
-    score -= myUnicornEscapability * WEIGHT_ESCAPABILITY; // penality when our unicorn has few escape moves
-    score += oppUnicornEscapability * WEIGHT_TRAPPED_UNICORN; // reward when opponent unicorn has few escape moves
+    score += myUnicornEscapability * WEIGHT_ESCAPABILITY; // more escape routes for our unicorn = good
+    score -= oppUnicornEscapability * WEIGHT_TRAPPED_UNICORN; // more escape routes for opponent unicorn = bad
 
     // Unicorn danger scores
     if (minMyDist != Integer.MAX_VALUE) {
