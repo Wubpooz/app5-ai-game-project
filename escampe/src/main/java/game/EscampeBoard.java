@@ -288,6 +288,63 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
 
 
 
+  /**
+   * Returns the number of legal moves for the given player without allocating any List or EscampeMove.
+   * Use this in the heuristic instead of possibleMoves().size() to avoid object allocation on every leaf node.
+   * Returns 1 when the player must pass (the pass move "E" counts as one move), 0 on game over.
+   */
+  public int countPossibleMoves(PlayerColor playerRole) {
+    if (isGameOver()) return 0;
+    if (playerRole == null) return 0;
+
+    // Placement phase: count opening book entries
+    if (!hasPieces(playerRole)) {
+      return (playerRole == PlayerColor.WHITE) ? Opening.WHITE_OPENINGS.length : Opening.BLACK_OPENINGS.length;
+    }
+
+    int requiredLiseret = (lastMoveRow >= 0) ? LISERET[lastMoveRow][lastMoveCol] : -1;
+    int count = 0;
+
+    for (int r = 0; r < SIZE; r++) {
+      for (int c = 0; c < SIZE; c++) {
+        char piece = board[r][c];
+        if (!belongsTo(piece, playerRole)) continue;
+        if (requiredLiseret >= 0 && LISERET[r][c] != requiredLiseret) continue;
+        count += Long.bitCount(getReachableMask(r, c, LISERET[r][c], playerRole));
+      }
+    }
+
+    return (count == 0) ? 1 : count; // 1 represents the forced pass move
+  }
+
+  /**
+   * Returns the number of legal moves for the unicorn of the given player without allocating any objects.
+   * Use this in the heuristic instead of possibleMovesForUnicorn().size().
+   * Returns 1 when the unicorn must pass (counts as one move), 0 on game over.
+   */
+  public int countPossibleMovesForUnicorn(PlayerColor playerRole) {
+    if (isGameOver()) return 0;
+    if (playerRole == null) return 0;
+
+    // Placement phase
+    if (!hasPieces(playerRole)) {
+      return (playerRole == PlayerColor.WHITE) ? Opening.WHITE_OPENINGS.length : Opening.BLACK_OPENINGS.length;
+    }
+
+    int[] unicornPos = getUnicornPosition(playerRole);
+    if (unicornPos[0] == -1) return 0;
+
+    int requiredLiseret = (lastMoveRow >= 0) ? LISERET[lastMoveRow][lastMoveCol] : -1;
+    if (requiredLiseret >= 0 && LISERET[unicornPos[0]][unicornPos[1]] != requiredLiseret) {
+      return 0; // unicorn cannot move due to liseret constraint
+    }
+
+    int count = Long.bitCount(getReachableMask(unicornPos[0], unicornPos[1], LISERET[unicornPos[0]][unicornPos[1]], playerRole));
+    return (count == 0) ? 1 : count; // 1 represents the forced pass move
+  }
+
+
+
   // =========== Utils ===========
   private boolean belongsTo(char piece, PlayerColor pc) {
     if (pc == PlayerColor.WHITE) return piece == WHITE_UNICORN || piece == WHITE_PALADIN;

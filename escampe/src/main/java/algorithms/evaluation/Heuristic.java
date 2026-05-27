@@ -97,10 +97,10 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     // =====================================================
     // =============== Heuristic calculation ===============
     // =====================================================
-    int myLegalMoves = board.possibleMoves(role).size();
-    int oppLegalMoves = board.possibleMoves(role.getOpponent()).size();
-    int myUnicornEscapability = board.possibleMovesForUnicorn(role).size();
-    int oppUnicornEscapability = board.possibleMovesForUnicorn(role.getOpponent()).size();
+    int myLegalMoves = board.countPossibleMoves(role);
+    int oppLegalMoves = board.countPossibleMoves(role.getOpponent());
+    int myUnicornEscapability = board.countPossibleMovesForUnicorn(role);
+    int oppUnicornEscapability = board.countPossibleMovesForUnicorn(role.getOpponent());
 
 
     // Calculate distances using already-collected paladin positions (no second board scan)

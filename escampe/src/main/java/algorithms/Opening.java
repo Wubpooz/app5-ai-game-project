@@ -5,7 +5,7 @@ import java.util.List;
 import game.EscampeMove;
 
 public class Opening {
-  protected static final String[] WHITE_OPENINGS = {
+  public static final String[] WHITE_OPENINGS = {
     "C1/A1/B2/D2/E2/F1", // Balanced (all bands covered, unicorn central on double)
     "C1/A2/B1/D2/E1/F2", // Widespread (paladins in every column, unicorn on single)
     "C1/A1/B2/D2/F2/E2", // Triple-heavy (max mobility, aggressive)
@@ -16,7 +16,7 @@ public class Opening {
     "C1/A1/F1/B2/E2/D2"  // Symmetric (paladins mirrored around center, unicorn on double)
   };
 
-  protected static final String[] BLACK_OPENINGS = {
+  public static final String[] BLACK_OPENINGS = {
     "C6/A6/B5/D5/E5/F6",
     "C6/A5/B6/D5/E6/F5",
     "C6/A6/B5/D5/F5/E5",
