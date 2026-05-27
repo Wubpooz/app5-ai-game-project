@@ -1,6 +1,6 @@
 # TODO
 ## Search
-- [ ] Minimax with alpha-beta pruning
+- [x] Minimax with alpha-beta pruning
 
 - [ ] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
     ```java
@@ -228,8 +228,6 @@
     chi^2	234.30
     dof	178
     p-value	0.30%
-- [ ] `-v` flag to print the board each turn else don't 
 - [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
 - [ ] Add a bar like in chess to see which side is winning
 - [ ] Mark moves as brilliant?  
-- [ ] Solo & Duo human play ?  

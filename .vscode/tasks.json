@@ -121,6 +121,24 @@
         "reveal": "always",
         "panel": "new"
       }
+    },
+    {
+      "label": "Export Training Data",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [
+        "runDataExport",
+        "--args=--size 100 --output training_data.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/escampe"
+      },
+      "dependsOn": "Compile Game (Gradle)",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ],
   "inputs": [
