@@ -49,7 +49,7 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     int myUnicornCol = -1;
     int oppUnicornRow = -1;
     int oppUnicornCol = -1;
-    int[][] paladinPositionsBand = new int[4][3]; // max 4 paladins on the board
+    int[][] paladinPositionsBand = new int[4][3]; // max 5 paladins on the board
     int paladinCount = 0;
     int[][] oppPaladinPositionsBand = new int[4][3];
     int oppPaladinCount = 0;

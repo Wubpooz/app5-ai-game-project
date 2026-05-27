@@ -21,7 +21,7 @@
 
 &nbsp;  
 ## Game Rules
-This is a 2-player game. Each player has 4 paladins and 1 unicorn, either white or black.  
+This is a 2-player game. Each player has 5 paladins and 1 unicorn, either white or black.  
 The goal is to capture the opponent's unicorn by moving a paladin to its position.  
 The pieces are placed on a 6 by 6 grid. Each circle of the grid is either a simple, double, or triple-banded circle.  
 ![game board](docs/board.png)
@@ -41,7 +41,7 @@ If a player can't move any of their pieces, they pass their turn and the opponen
 ### 1. Comment modéliser un état du jeu (plateau et pièces restantes) ? Préciser les avantages/inconvénients de votre représentation.  
 Une représentation efficace est de séparer les données statiques et dynamiques:  
 - Statique: une matrice 6x6 des bandes (1, 2, 3).  
-- Dynamique: positions des 10 pièces, joueur à jouer, bande imposée par le dernier coup adverse (ou "libre" après un passe), et éventuellement un compteur de répétitions.
+- Dynamique: positions des 12 pièces, joueur à jouer, bande imposée par le dernier coup adverse (ou "libre" après un passe), et éventuellement un compteur de répétitions.
 
 Avantages:
 - Compact, facilement hashable (utile pour table de transposition et détection de répétitions).

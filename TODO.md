@@ -194,7 +194,7 @@
       Very wide coverage, central paladins can reach enemy unicorn quickly
 
     - "Triple Dominance" (C1/A1/B2/D2/F2/E2)
-      4 paladins on triple squares → high mobility
+      5 paladins on triple squares → high mobility
       Unicorn on double → safe
       Risk: if opponent always lands on non-triple, you have fewer choices
     ```java
