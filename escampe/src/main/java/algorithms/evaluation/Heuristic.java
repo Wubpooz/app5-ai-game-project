@@ -49,9 +49,9 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     int myUnicornCol = -1;
     int oppUnicornRow = -1;
     int oppUnicornCol = -1;
-    int[][] paladinPositionsBand = new int[4][3]; // max 5 paladins on the board
+    int[][] paladinPositionsBand = new int[5][3]; // max 5 paladins on the board
     int paladinCount = 0;
-    int[][] oppPaladinPositionsBand = new int[4][3];
+    int[][] oppPaladinPositionsBand = new int[5][3];
     int oppPaladinCount = 0;
 
     char myUnicornChar = (role == PlayerColor.WHITE) ? WHITE_UNICORN : BLACK_UNICORN;
@@ -71,20 +71,16 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
         } else if (piece == oppUnicornChar) {
           oppUnicornRow = r;
           oppUnicornCol = c;
-        } else if (piece == myPaladinChar) {
-          if (paladinCount < 4) {
-            paladinPositionsBand[paladinCount][0] = r;
-            paladinPositionsBand[paladinCount][1] = c;
-            paladinPositionsBand[paladinCount][2] = board.getLiseretAt(r, c);
-            paladinCount++;
-          }
-        } else if (piece == oppPaladinChar) {
-          if (oppPaladinCount < 4) {
-            oppPaladinPositionsBand[oppPaladinCount][0] = r;
-            oppPaladinPositionsBand[oppPaladinCount][1] = c;
-            oppPaladinPositionsBand[oppPaladinCount][2] = board.getLiseretAt(r, c);
-            oppPaladinCount++;
-          }
+        } else if (piece == myPaladinChar && paladinCount < 5) {
+          paladinPositionsBand[paladinCount][0] = r;
+          paladinPositionsBand[paladinCount][1] = c;
+          paladinPositionsBand[paladinCount][2] = board.getLiseretAt(r, c);
+          paladinCount++;
+        } else if (piece == oppPaladinChar && oppPaladinCount < 5) {
+          oppPaladinPositionsBand[oppPaladinCount][0] = r;
+          oppPaladinPositionsBand[oppPaladinCount][1] = c;
+          oppPaladinPositionsBand[oppPaladinCount][2] = board.getLiseretAt(r, c);
+          oppPaladinCount++;
         }
       }
     }

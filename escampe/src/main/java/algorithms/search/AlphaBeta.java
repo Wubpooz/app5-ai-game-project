@@ -64,6 +64,13 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 		return alphaBeta(board, playerRole);
 	}
 
+	/**
+	 * Evaluate the board state from the perspective of playerMaxRole using Alpha-Beta search.
+	 */
+	public int evaluate(B board, int depth) {
+		return maxValue(board, playerMaxRole, depth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+	}
+
 	/*
 	 * PUBLIC METHODS ==============
 	 */
