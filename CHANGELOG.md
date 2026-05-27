@@ -6,7 +6,7 @@ Format: Keep a top header for the unreleased section, then list versions in reve
 
 ## [Unreleased]
 
-## [v0.1.0] - 2026-05-27
+## [v1.0.0] - 2026-05-27
 - Added: Efficient bitwise move counting methods `countPossibleMoves` and `countPossibleMovesForUnicorn` in `EscampeBoard`.
 - Changed: Made opening libraries public in `Opening.java` for integration.
 - Changed: Configured `build.gradle` and `mainClass` files to point to `io.ClientJeu` and `game.EscampeAIPlayer`.
