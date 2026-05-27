@@ -25,15 +25,15 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
   private static final char BLACK_PALADIN = 'n';
 
 
-  private static final int WEIGHT_MIN_DIST = 10; // min distance from our paladins to the opponent unicorn
-  private static final int WEIGHT_AVG_DIST = 2; // average distance from our paladins to the opponent unicorn
-  private static final int WEIGHT_UNICORN_DANGER_MIN_DIST = 5; // penality for each opponent paladin close to our unicorn
-  private static final int WEIGHT_UNICORN_DANGER_AVG_DIST = 5; // penality for each opponent paladin close to our unicorn
-  private static final int WEIGHT_ESCAPABILITY = 50; // penality when our unicorn has few escape moves
-  private static final int WEIGHT_TRAPPED_UNICORN = 30; // reward when opponent unicorn has few escape moves
-  private static final int WEIGHT_LEGAL_MOVES = 10; // our move count is bad, opponent move count is good
-  private static final int WEIGHT_BAND_CONTROL = 80; // reward for controlling bands that restrict opponent movements
-  private static final int WEIGHT_OPP_BAND_CONTROL = 90; // penality for opponent controlling bands that restrict our movements
+  private final HeuristicConfig config;
+
+  public Heuristic() {
+    this.config = HeuristicConfig.createDefault();
+  }
+
+  public Heuristic(HeuristicConfig config) {
+    this.config = config;
+  }
 
   private static final int WE_PASS_PENALTY = 500; // penality when we have to pass
   private static final int PASS_PRESSURE_REWARD = 100; // reward when opponent has to pass
@@ -126,41 +126,41 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
     if (myLegalMoves == 0) {
       score -= WE_PASS_PENALTY; // penality when we have to pass
     } else {
-      score += myLegalMoves * WEIGHT_LEGAL_MOVES; // reward for having more legal moves
+      score += myLegalMoves * config.weightLegalMoves; // reward for having more legal moves
     }
 
     // Pass pressure
     if (oppLegalMoves == 0) {
       score += PASS_PRESSURE_REWARD; // reward when opponent has to pass
     } else {
-      score -= oppLegalMoves * WEIGHT_LEGAL_MOVES; // penality for opponent having more legal moves
+      score -= oppLegalMoves * config.weightLegalMoves; // penality for opponent having more legal moves
     }
 
     // Band control score
     for (int i = 0; i < paladinCount; i++) {
       int band = paladinPositionsBand[i][2];
-      if (band == 1) score += WEIGHT_BAND_CONTROL; // controlling a 1-band square is good
-      else if (band == 3) score -= WEIGHT_BAND_CONTROL; // controlling a 3-band square is bad
+      if (band == 1) score += config.weightBandControl; // controlling a 1-band square is good
+      else if (band == 3) score -= config.weightBandControl; // controlling a 3-band square is bad
     }
     for (int i = 0; i < oppPaladinCount; i++) {
       int band = oppPaladinPositionsBand[i][2];
-      if (band == 1) score -= WEIGHT_OPP_BAND_CONTROL; // opponent controlling a 1-band square is bad for us
-      else if (band == 3) score += WEIGHT_OPP_BAND_CONTROL; // opponent controlling a 3-band square is good for us
+      if (band == 1) score -= config.weightOppBandControl; // opponent controlling a 1-band square is bad for us
+      else if (band == 3) score += config.weightOppBandControl; // opponent controlling a 3-band square is good for us
     }
     //TODO maybe add the check of wheter the band control is actually restricting the opponent movements
 
     // Unicorn escapability score
-    score += myUnicornEscapability * WEIGHT_ESCAPABILITY; // more escape routes for our unicorn = good
-    score -= oppUnicornEscapability * WEIGHT_TRAPPED_UNICORN; // more escape routes for opponent unicorn = bad
+    score += myUnicornEscapability * config.weightEscapability; // more escape routes for our unicorn = good
+    score -= oppUnicornEscapability * config.weightTrappedUnicorn; // more escape routes for opponent unicorn = bad
 
     // Unicorn danger scores
     if (minMyDist != Integer.MAX_VALUE) {
-      score -= WEIGHT_MIN_DIST * minMyDist; // min distance is more important than average distance, so we multiply it by a higher weight
-      score -= WEIGHT_AVG_DIST * sumMyDist / paladinCount; // average distance
+      score -= config.weightMinDist * minMyDist; // min distance is more important than average distance, so we multiply it by a higher weight
+      score -= config.weightAvgDist * sumMyDist / paladinCount; // average distance
     }
     if (minOppDist != Integer.MAX_VALUE) {
-      score += WEIGHT_UNICORN_DANGER_MIN_DIST * minOppDist;
-      score += WEIGHT_UNICORN_DANGER_AVG_DIST * sumOppDist / oppPaladinCount; // average distance
+      score += config.weightUnicornDangerMinDist * minOppDist;
+      score += config.weightUnicornDangerAvgDist * sumOppDist / oppPaladinCount; // average distance
     }
 
     return score;
