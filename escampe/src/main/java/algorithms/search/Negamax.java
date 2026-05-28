@@ -8,8 +8,8 @@ import interfaces.IRole;
 import java.util.logging.Logger;
 
 /**
- * Alpha-Beta Pruning Algorithm - optimized version of MiniMax
- * Eliminates branches that cannot affect the final decision
+ * Negamax : max(a, b) == -min(-a, -b)
+ * optimized version of Alpha-Beta, use only maxValue
  */
 public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> implements GameAlgorithm<M,R,B> {
 
