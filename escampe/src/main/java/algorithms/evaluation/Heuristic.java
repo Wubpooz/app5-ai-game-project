@@ -136,17 +136,33 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
       score -= oppLegalMoves * config.weightLegalMoves; // penality for opponent having more legal moves
     }
 
-    // Band control score
+    // Band coverage: penalize missing bands (1, 2, 3) to prevent forced passes
+    boolean[] myBands = new boolean[4];
+    boolean[] oppBands = new boolean[4];
     for (int i = 0; i < paladinCount; i++) {
-      int band = paladinPositionsBand[i][2];
-      if (band == 1) score -= config.weightBandControl; // our piece on 1-band = restricted mobility = bad
-      else if (band == 3) score += config.weightBandControl; // our piece on 3-band = high mobility = good
+      myBands[paladinPositionsBand[i][2]] = true;
     }
     for (int i = 0; i < oppPaladinCount; i++) {
-      int band = oppPaladinPositionsBand[i][2];
-      if (band == 1) score += config.weightOppBandControl; // opponent on 1-band = they're restricted = good for us
-      else if (band == 3) score -= config.weightOppBandControl; // opponent on 3-band = they're mobile = bad for us
+      oppBands[oppPaladinPositionsBand[i][2]] = true;
     }
+    if (myUnicornRow >= 0 && myUnicornCol >= 0) {
+      myBands[board.getLiseretAt(myUnicornRow, myUnicornCol)] = true;
+    }
+    if (oppUnicornRow >= 0 && oppUnicornCol >= 0) {
+      oppBands[board.getLiseretAt(oppUnicornRow, oppUnicornCol)] = true;
+    }
+
+    int myMissingBands = 0;
+    if (!myBands[1]) myMissingBands++;
+    if (!myBands[2]) myMissingBands++;
+    if (!myBands[3]) myMissingBands++;
+    score -= myMissingBands * config.weightBandControl;
+
+    int oppMissingBands = 0;
+    if (!oppBands[1]) oppMissingBands++;
+    if (!oppBands[2]) oppMissingBands++;
+    if (!oppBands[3]) oppMissingBands++;
+    score += oppMissingBands * config.weightOppBandControl;
 
     // Unicorn escapability score
     score += myUnicornEscapability * config.weightEscapability; // more escape routes for our unicorn = good

@@ -60,7 +60,6 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 
 	@Override
 	public M bestMove(B board, R playerRole) {
-		LOGGER.info("[AlphaBeta]");
 		return alphaBeta(board, playerRole);
 	}
 
