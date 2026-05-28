@@ -195,7 +195,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   // returning a 64-bit mask of (r * SIZE + c) coordinates.
   private long getReachableMask(int fr, int fc, int dist, PlayerColor playerRole) {
     long visited = 1L << (fr * SIZE + fc); // mark starting cell as visited
-    return findReachableCells(fr, fc, dist, visited, playerRole);
+    return findReachableCells(fr, fc, dist, visited, playerRole, isUnicorn(board[fr][fc]));
   }
 
   /**
@@ -207,10 +207,11 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
    * @param playerRole current player's role for move legality checks
    * @return bitmask of reachable destination cells at exact distance
    */
-  private long findReachableCells(int r, int c, int steps, long visited, PlayerColor playerRole) {
+  private long findReachableCells(int r, int c, int steps, long visited, PlayerColor playerRole, boolean pieceIsUnicorn) {
     if (steps == 0) { // base case: check if current cell is a valid destination
       char target = board[r][c];
-      if (target == EMPTY || (isUnicorn(target) && !belongsTo(target, playerRole))) {
+      // valid destination if target is empty or can be captured (is a unicorn while we're not a unicorn and belongs to the opponent)
+      if (target == EMPTY || (!pieceIsUnicorn && isUnicorn(target) && !belongsTo(target, playerRole))) {
         return 1L << (r * SIZE + c); // valid destination
       }
       return 0L;
@@ -229,12 +230,13 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       } else {
         // Final step destination check
         char target = board[nr][nc];
+        // continue if target is not empty and cannot be captured (belongs to player or is not a unicorn)
         if (target != EMPTY && (!isUnicorn(target) || belongsTo(target, playerRole))) {
           continue;
         }
       }
 
-      mask |= findReachableCells(nr, nc, steps - 1, visited | bit, playerRole); // mark cell as visited with an OR operation
+      mask |= findReachableCells(nr, nc, steps - 1, visited | bit, playerRole, pieceIsUnicorn); // mark cell as visited with an OR operation
     }
     return mask;
   }
