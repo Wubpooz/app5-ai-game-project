@@ -1,6 +1,7 @@
 package game;
 
 import interfaces.IJoueur;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class EscampeAIPlayer implements IJoueur {
@@ -24,6 +25,11 @@ public class EscampeAIPlayer implements IJoueur {
   public EscampeAIPlayer(algorithms.GameAlgorithm<EscampeMove,PlayerColor,EscampeBoard> alg) {
     this.ai = alg;
   }
+
+  // Pondering support: compute a candidate move during opponent's turn
+  private final AtomicReference<EscampeMove> ponderedMove = new AtomicReference<>(null);
+  private Thread ponderThread = null;
+  private static final long PONDER_TIME_MS = 2000; // max time to spend pondering
 
   // Interface Methods
   /**
@@ -59,10 +65,22 @@ public class EscampeAIPlayer implements IJoueur {
     }
     // TODO Choose an opening here or in board (at random maybe)
     // E is the pass move, present in board.possibleMoves() when no placements/moves are available
-    long startTime = System.nanoTime();
-    EscampeMove move = ai.bestMove(board, this.role, remainingTimeMs);
-    long endTime = System.nanoTime();
-    remainingTimeMs -= (endTime - startTime) / 1_000_000; // Convert nanoseconds to milliseconds
+    // If we have a pondered move ready from the opponent's turn, use it.
+    EscampeMove move = ponderedMove.getAndSet(null);
+    if (move == null) {
+      long startTime = System.nanoTime();
+      move = ai.bestMove(board, this.role, remainingTimeMs);
+      long endTime = System.nanoTime();
+      remainingTimeMs -= (endTime - startTime) / 1_000_000; // Convert nanoseconds to milliseconds
+    } else {
+      // we used a precomputed move; cancel any active ponder thread
+      if (ponderThread != null && ponderThread.isAlive()) {
+        try {
+          ponderThread.interrupt();
+        } catch (Exception ignored) {}
+      }
+      ponderThread = null;
+    }
     System.out.println("Time left: " + remainingTimeMs + " ms");
     // if (remainingTimeMs <= 0) {
     //   // lose
@@ -90,6 +108,26 @@ public class EscampeAIPlayer implements IJoueur {
   public void mouvementEnnemi(String coup) {
     EscampeMove move = new EscampeMove(coup);
     board.play(move, this.opponentRole);
+    // Start background pondering for our next move (if not already pondering)
+    // only start pondering after initial positions are set and if the game is not already over and opponent didn't skip last turn
+    if (this.ai != null && !board.isGameOver() && board.getLastMoveRow() != -1 && board.getLastMoveCol() != -1) {
+      if (ponderThread == null || !ponderThread.isAlive()) {
+        ponderedMove.set(null);
+        ponderThread = new Thread(() -> {
+          try {
+            System.out.println("Starting to ponder opponent's move...");
+            EscampeBoard copy = board.copy();
+            EscampeMove pm = ai.bestMove(copy, this.role, PONDER_TIME_MS);
+            if (pm != null) ponderedMove.set(pm);
+            System.out.println("Pondering complete. Move found: " + pm);
+          } catch (Exception e) {
+            // swallow exceptions from background pondering
+          }
+        }, "ponder-thread");
+        ponderThread.setDaemon(true);
+        ponderThread.start();
+      }
+    }
   }
 
 
