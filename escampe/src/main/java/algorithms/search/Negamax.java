@@ -6,6 +6,7 @@ import interfaces.IBoard;
 import interfaces.IMove;
 import interfaces.IRole;
 import java.util.logging.Logger;
+import algorithms.TimeManager;
 
 /**
  * Negamax : max(a, b) == -min(-a, -b)
@@ -59,17 +60,17 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	 */
 
 	@Override
-	public M bestMove(B board, R playerRole) {
+	public M bestMove(B board, R playerRole, long remainingTimeMs) {
 		LOGGER.info("[Negamax]");
-		return negamax(board, playerRole);
+		return negamax(board, playerRole, remainingTimeMs);
 	}
 
-	/**
-	 * Evaluate the board state from the perspective of playerMaxRole using Negamax search.
-	 */
-	public int evaluate(B board, int depth) {
-		return maxValue(board, playerMaxRole, depth, Integer.MIN_VALUE, Integer.MAX_VALUE);
-	}
+	// /**
+	//  * Evaluate the board state from the perspective of playerMaxRole using Negamax search.
+	//  */
+	// public int evaluate(B board, int depth) {
+	// 	return maxValue(board, playerMaxRole, depth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+	// }
 
 	/*
 	 * PUBLIC METHODS ==============
@@ -108,17 +109,24 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	/**
 	 * Root level search - tries all possible moves and returns the best one
 	 */
-	private M negamax(B board, R playerRole) {
+	private M negamax(B board, R playerRole, long remainingTimeMs) {
 		M bestMove = null;
 		int bestValue = Integer.MIN_VALUE;
 		int alpha = Integer.MIN_VALUE;
 		int beta = Integer.MAX_VALUE;
 
+		bestMove = board.possibleMoves(playerRole).get(0); // Default to first move if no better move is found
+		TimeManager timeManager = new TimeManager(remainingTimeMs, board.possibleMoves(playerRole).size());
+
         R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
 		for (M move : board.possibleMoves(playerRole)) {
+			if (timeManager.shouldStopSoft()) {
+				// LOGGER.info("Soft time limit reached, returning best move found so far.");
+				break;
+			}
 			B nextBoard = board.copy();
 			nextBoard.play(move, playerRole);
-			int value = -maxValue(nextBoard, opponentRole, depthMax - 1, -beta, -alpha);
+			int value = -maxValue(nextBoard, opponentRole, depthMax - 1, -beta, -alpha, timeManager);
 			if (value > bestValue || bestMove == null) {
 				bestValue = value;
 				bestMove = move;
@@ -133,7 +141,12 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	 * Returns the maximum value among all child nodes
 	 * Prunes branches when alpha >= beta
 	 */
-	private int maxValue(B board, R playerRole, int depth, int alpha, int beta) {
+	private int maxValue(B board, R playerRole, int depth, int alpha, int beta, TimeManager timeManager) {
+
+		if (timeManager.shouldStopHard()) {
+			// LOGGER.info("Hard time limit reached, returning heuristic evaluation.");
+			return h.eval(board, playerRole);
+		}
 		// Base case: game over or depth limit reached
 		if (board.isGameOver() || depth == 0) {
 			nbLeaves++;
@@ -145,7 +158,7 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 		for (M move : board.possibleMoves(playerRole)) {
 			B nextBoard = board.copy();
 			nextBoard.play(move, playerRole);
-			value = Math.max(value, -maxValue(nextBoard, opponentRole, depth - 1, -beta, -alpha));
+			value = Math.max(value, -maxValue(nextBoard, opponentRole, depth - 1, -beta, -alpha, timeManager));
 			alpha = Math.max(alpha, value);
 
 			// Alpha-Beta Pruning: if alpha >= beta, we can prune remaining branches

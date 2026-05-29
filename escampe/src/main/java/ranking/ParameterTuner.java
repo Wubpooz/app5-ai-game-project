@@ -239,7 +239,7 @@ public class ParameterTuner {
             while (!board.isGameOver() && moveCount < maxMoves) {
                 GameAlgorithm<EscampeMove, PlayerColor, EscampeBoard> currentAlgo = (turn == PlayerColor.WHITE) ? algWhite : algBlack;
                 
-                EscampeMove move = currentAlgo.bestMove(board, turn);
+                EscampeMove move = currentAlgo.bestMove(board, turn, 10000); // 10 seconds per move max
                 if (move == null || move.toString().equals("xxxxx")) {
                     break;
                 }

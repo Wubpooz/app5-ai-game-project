@@ -6,6 +6,7 @@ import interfaces.IBoard;
 import interfaces.IMove;
 import interfaces.IRole;
 import java.util.logging.Logger;
+import algorithms.TimeManager;
 
 /**
  * Alpha-Beta Pruning Algorithm - optimized version of MiniMax
@@ -59,8 +60,8 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 	 */
 
 	@Override
-	public M bestMove(B board, R playerRole) {
-		return alphaBeta(board, playerRole);
+	public M bestMove(B board, R playerRole, long remainingTimeMs) {
+		return alphaBeta(board, playerRole, remainingTimeMs);
 	}
 
 	/**
@@ -107,7 +108,7 @@ public class AlphaBeta<M extends IMove, R extends IRole, B extends IBoard<M,R,B>
 	/**
 	 * Root level search - tries all possible moves and returns the best one
 	 */
-	private M alphaBeta(B board, R playerRole) {
+	private M alphaBeta(B board, R playerRole, long remainingTimeMs) {
 		M bestMove = null;
 		int bestValue = Integer.MIN_VALUE;
 		int alpha = Integer.MIN_VALUE;

@@ -6,6 +6,7 @@ import interfaces.IBoard;
 import interfaces.IMove;
 import interfaces.IRole;
 import java.util.logging.Logger;
+import algorithms.TimeManager;
 
 public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> implements GameAlgorithm<M,R,B> {
 
@@ -51,9 +52,9 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
     */
 
   @Override
-  public M bestMove(B board, R playerRole) {
+  public M bestMove(B board, R playerRole, long remainingTimeMs) {
     LOGGER.info("[MiniMax]");
-    return minimax(board, playerRole);
+    return minimax(board, playerRole, remainingTimeMs);
   }
 
   /*
@@ -84,7 +85,7 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
   /*
     * PRIVATE METHODS ===============
     */
-  private M minimax(B board, R playerRole) {
+  private M minimax(B board, R playerRole, long remainingTimeMs) {
     M bestMove = null;
     int bestValue = Integer.MIN_VALUE;
     for (M move : board.possibleMoves(playerRole)) {

@@ -13,6 +13,8 @@ public class EscampeAIPlayer implements IJoueur {
   // Helpful variables
   private PlayerColor opponentRole;
 
+  private long remainingTimeMs = 300_000; // 5 minutes in milliseconds
+  // private long remainingTimeMs = 160; // for tests
 
   // Constructors
   public EscampeAIPlayer() {
@@ -36,7 +38,13 @@ public class EscampeAIPlayer implements IJoueur {
 
     if (this.ai == null) {
       interfaces.IHeuristic<EscampeBoard, PlayerColor> heuristic = new algorithms.evaluation.Heuristic();
-      this.ai = new algorithms.search.AlphaBeta<>(this.role, this.opponentRole, heuristic);
+      this.ai = new algorithms.search.Negamax<>(this.role, this.opponentRole, heuristic);
+      // // to test differents algorithms against each other :
+      // if (this.role == PlayerColor.WHITE) {
+      //   this.ai = new algorithms.search.Negamax<>(this.role, this.opponentRole, heuristic);
+      // } else {
+      //   this.ai = new algorithms.search.AlphaBeta<>(this.role, this.opponentRole, heuristic);
+      // }
     }
   }
 
@@ -51,7 +59,21 @@ public class EscampeAIPlayer implements IJoueur {
     }
     // TODO Choose an opening here or in board (at random maybe)
     // E is the pass move, present in board.possibleMoves() when no placements/moves are available
-    EscampeMove move = ai.bestMove(board, this.role);
+    long startTime = System.nanoTime();
+    EscampeMove move = ai.bestMove(board, this.role, remainingTimeMs);
+    long endTime = System.nanoTime();
+    remainingTimeMs -= (endTime - startTime) / 1_000_000; // Convert nanoseconds to milliseconds
+    System.out.println("Time left: " + remainingTimeMs + " ms");
+    // if (remainingTimeMs <= 0) {
+    //   // lose
+    //   System.out.println("Time's up! I lose...");
+    //   return "xxxxx";
+    // }
+    if (remainingTimeMs < 0) {
+      remainingTimeMs = 0;
+      System.out.println("Time's up!");
+      // and now we just pick the first move every time pretty much
+    }
     if (move == null) {
       return "xxxxx"; // Fallback to indicate end of game
     }
