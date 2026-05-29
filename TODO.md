@@ -2,7 +2,7 @@
 ## Search
 - [x] Minimax with alpha-beta pruning
 
-- [ ] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
+- [x] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
     ```java
     public class TimeManager {
         private final long softBoundMs;
@@ -86,7 +86,7 @@
     ```
 
 
-- [ ] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
+- [x] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
 
 - [ ] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
   - [ ] [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows): when doing iterative deepening, instead of starting each deeper search with alpha=-inf and beta=+inf, we can start with a narrow window around the previous iteration's score (e.g., alpha=prev_score-50, beta=prev_score+50). This can lead to faster cutoffs if the score doesn't change much between iterations. If the search fails low or high, we can widen the window and re-search. Be careful with the choice of window size to balance between speed and the risk of re-searching.
