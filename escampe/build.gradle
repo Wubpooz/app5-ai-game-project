@@ -42,13 +42,6 @@ task fatJar(type: Jar) {
     with jar
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src/main/java', 'src/model']
-        }
-    }
-}
 
 repositories {
     mavenCentral()
@@ -65,4 +58,26 @@ task runDataExport(type: JavaExec) {
     mainClass = 'model.DataExport'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+task runTournament(type: JavaExec) {
+    group = 'application'
+    description = 'Runs the tournament runner'
+    mainClass = 'ranking.TournamentRunner'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task runSimplexTuner(type: JavaExec) {
+    group = 'application'
+    description = 'Runs the simplex parameter tuner'
+    mainClass = 'ranking.SimplexTuner'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task runSpsaTuner(type: JavaExec) {
+    group = 'application'
+    description = 'Runs the SPSA parameter tuner'
+    mainClass = 'ranking.ParameterTuner'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
 

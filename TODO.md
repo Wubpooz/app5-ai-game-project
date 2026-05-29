@@ -231,3 +231,4 @@
 - [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
 - [ ] Add a bar like in chess to see which side is winning
 - [ ] Mark moves as brilliant?  
+- [ ] Manim video explainer
