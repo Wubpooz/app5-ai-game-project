@@ -21,6 +21,14 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	/** Default value for depth limit */
 	private static final int DEPTH_MAX_DEFAULT = 4;
 
+	/**
+	 * Safe infinity for Negamax alpha-beta bounds.
+	 * Must be larger than any heuristic value (WIN_SCORE = 100_000)
+	 * AND satisfy: -NEGAMAX_INF > Integer.MIN_VALUE (no overflow when negated).
+	 * 1_000_000_000 negated = -1_000_000_000, well within int range.
+	 */
+	private static final int NEGAMAX_INF = 1_000_000_000;
+
 	// Attributes
 	/** Role of the max player */
 	private final R playerMaxRole;
@@ -146,9 +154,9 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 			for (int currentDepth = 1; currentDepth <= depthMax; currentDepth++) {
 				if (timeManager.shouldStopSoft()) break;
 
-				int alpha = Integer.MIN_VALUE;
-				int beta = Integer.MAX_VALUE;
-				int bestValue = Integer.MIN_VALUE;
+				int alpha = -NEGAMAX_INF;
+				int beta = NEGAMAX_INF;
+				int bestValue = -NEGAMAX_INF;
 				M iterBest = bestMove;
 
 				for (M move : moves) {
@@ -170,9 +178,9 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 
 		} else {
 			// --- Fixed-depth mode (for fair tournament comparisons) ---
-			int alpha = Integer.MIN_VALUE;
-			int beta = Integer.MAX_VALUE;
-			int bestValue = Integer.MIN_VALUE;
+			int alpha = -NEGAMAX_INF;
+			int beta = NEGAMAX_INF;
+			int bestValue = -NEGAMAX_INF;
 
 			for (M move : moves) {
 				if (timeManager.shouldStopSoft()) break;
@@ -205,7 +213,7 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 			return sign * h.eval(board, playerMaxRole);
 		}
 
-		int value = Integer.MIN_VALUE;
+		int value = -NEGAMAX_INF;
 		R opponentRole = playerRole.equals(playerMaxRole) ? playerMinRole : playerMaxRole;
 		for (M move : board.possibleMoves(playerRole)) {
 			board.play(move, playerRole);
