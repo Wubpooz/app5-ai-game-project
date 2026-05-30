@@ -94,7 +94,7 @@ public class CheatingEngine implements IJoueur {
         if (localBoard.isGameOver()) return "xxxxx";
 
         // Use the AI against the (potentially stolen) authoritative board state
-        EscampeMove move = ai.bestMove(localBoard, this.role);
+        EscampeMove move = ai.bestMove(localBoard, this.role, 1000);
         if (move == null) return "xxxxx";
 
         localBoard.play(move, this.role);
