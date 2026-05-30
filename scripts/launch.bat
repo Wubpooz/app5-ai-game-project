@@ -5,8 +5,8 @@ cd /d "%~dp0.."
 
 set PORT=1234
 set GAMES=1
-set PLAYER_CLASS=game.AIPlayer
-set OPPONENT_CLASS=game.AIPlayer
+set PLAYER_CLASS=game.EscampeAIPlayer
+set OPPONENT_CLASS=game.EscampeAIPlayer
 
 if "%1"=="compile" goto compile
 if "%1"=="server" goto server

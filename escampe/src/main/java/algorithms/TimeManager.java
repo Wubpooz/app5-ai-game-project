@@ -31,11 +31,13 @@ public class TimeManager {
     }
 
     public boolean shouldStopSoft() {
+        if (Thread.currentThread().isInterrupted()) return true;
         long elapsedMs = (System.nanoTime() - startTimeNs) / 1_000_000;
         return elapsedMs >= softBoundMs;
     }
 
     public boolean shouldStopHard() {
+        if (Thread.currentThread().isInterrupted()) return true;
         long elapsedMs = (System.nanoTime() - startTimeNs) / 1_000_000;
         return elapsedMs >= hardBoundMs;
     }

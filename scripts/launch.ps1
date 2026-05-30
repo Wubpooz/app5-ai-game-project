@@ -6,8 +6,8 @@ param(
     [string]$Mode = "interactive",
     [int]$Port = 1234,
     [int]$Games = 1,
-    [string]$PlayerClass = "game.AIPlayer",
-    [string]$OpponentClass = "game.AIPlayer"
+    [string]$PlayerClass = "game.EscampeAIPlayer",
+    [string]$OpponentClass = "game.EscampeAIPlayer"
 )
 
 $root = Resolve-Path "$PSScriptRoot\.."

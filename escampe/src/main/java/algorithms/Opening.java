@@ -43,8 +43,9 @@ public class Opening {
 
   public static List<EscampeMove> getOpeningsMoves(boolean isWhite) {
     String[] openings = isWhite ? WHITE_OPENINGS : BLACK_OPENINGS;
-    return List.of(openings).stream()
+    List<EscampeMove> list = List.of(openings).stream()
       .map(EscampeMove::new)
       .toList();
+    return new java.util.ArrayList<>(list);
   }
 }
