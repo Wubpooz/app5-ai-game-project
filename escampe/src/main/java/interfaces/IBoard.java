@@ -31,6 +31,13 @@ public interface IBoard<M extends IMove, R extends IRole, B extends IBoard<M, R,
 	 */
 	void play(M move, R playerRole);
 
+	/** undo move on the board, played by a player having the playerRole  
+	 * 
+	 * @param move
+	 * @param playerRole
+	 */
+	void undo(M move, R playerRole);
+
 	/**
 	 * checks that the board corresponds to an end of game
 	 * @return yes if the game completed

@@ -36,6 +36,20 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   private int lastMoveRow = -1;
   private int lastMoveCol = -1;
 
+  // History state stack for undo Move
+  private int[] historyLastMoveRow = new int[128];
+  private int[] historyLastMoveCol = new int[128];
+  private char[] historyCapturedPiece = new char[128];
+  private int historySize = 0;
+
+  private void ensureHistoryCapacity() {
+    if (historySize >= historyLastMoveRow.length) {
+      int newLen = historyLastMoveRow.length * 2;
+      historyLastMoveRow = Arrays.copyOf(historyLastMoveRow, newLen);
+      historyLastMoveCol = Arrays.copyOf(historyLastMoveCol, newLen);
+      historyCapturedPiece = Arrays.copyOf(historyCapturedPiece, newLen);
+    }
+  }
 
   // Initialization
   public EscampeBoard() {
@@ -48,6 +62,7 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
     }
     lastMoveRow = -1;
     lastMoveCol = -1;
+    historySize = 0;
     // The board starts empty. Initial positions are generated dynamically
     // during the placement phase (handled by possibleMoves and Opening).
   }
@@ -85,11 +100,19 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
   public void play(EscampeMove move, PlayerColor playerRole) {
     if (playerRole == null) return;
 
+    ensureHistoryCapacity();
+    historyLastMoveRow[historySize] = lastMoveRow;
+    historyLastMoveCol[historySize] = lastMoveCol;
+
     // Pass, reset lastMove so the opponent can freely choose their piece
     if (move.getMove().equals("E")) {
+      historyCapturedPiece[historySize] = EMPTY;
+      historySize++;
       lastMoveRow = -1;
       lastMoveCol = -1;
     } else if (move.getMove().contains("/")) { // Initial placement
+      historyCapturedPiece[historySize] = EMPTY;
+      historySize++;
       String[] parts = move.getMove().split("/");
       char unicorn = (playerRole == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
       char paladin = (playerRole == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
@@ -107,6 +130,8 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       lastMoveCol = -1;
     } else { // Normal move
       try {
+        historyCapturedPiece[historySize] = board[move.getToRow()][move.getToCol()];
+        historySize++;
         board[move.getToRow()][move.getToCol()] = board[move.getFromRow()][move.getFromCol()];
         board[move.getFromRow()][move.getFromCol()] = EMPTY;
         lastMoveRow = move.getToRow();
@@ -114,6 +139,31 @@ public class EscampeBoard implements interfaces.IBoard<EscampeMove, PlayerColor,
       } catch (IllegalArgumentException e) {
         System.err.println("Invalid move format: " + move);
       }
+    }
+  }
+
+  @Override
+  public void undo(EscampeMove move, PlayerColor playerRole) {
+    if (playerRole == null || historySize == 0) return;
+
+    historySize--;
+    lastMoveRow = historyLastMoveRow[historySize];
+    lastMoveCol = historyLastMoveCol[historySize];
+    char captured = historyCapturedPiece[historySize];
+
+    if (move.getMove().equals("E")) {
+      // Pass move: only lastMoveRow/lastMoveCol are restored, which we already did
+    } else if (move.getMove().contains("/")) { // Initial placement
+      // Remove all placed pieces
+      String[] parts = move.getMove().split("/");
+      for (String part : parts) {
+        int col = Character.toUpperCase(part.charAt(0)) - 'A';
+        int row = part.charAt(1) - '1';
+        board[row][col] = EMPTY;
+      }
+    } else { // Normal move
+      board[move.getFromRow()][move.getFromCol()] = board[move.getToRow()][move.getToCol()];
+      board[move.getToRow()][move.getToCol()] = captured;
     }
   }
 

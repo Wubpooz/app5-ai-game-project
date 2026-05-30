@@ -50,8 +50,28 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
   private int lastMoveRow = -1;
   private int lastMoveCol = -1;
 
+  // History state stack for undo Move
+  private int[] historyLastMoveRow = new int[128];
+  private int[] historyLastMoveCol = new int[128];
+  private char[] historyCapturedPiece = new char[128];
+  private boolean[] historyWhitePlaced = new boolean[128];
+  private boolean[] historyBlackPlaced = new boolean[128];
+  private int historySize = 0;
+
+  private void ensureHistoryCapacity() {
+    if (historySize >= historyLastMoveRow.length) {
+      int newLen = historyLastMoveRow.length * 2;
+      historyLastMoveRow = Arrays.copyOf(historyLastMoveRow, newLen);
+      historyLastMoveCol = Arrays.copyOf(historyLastMoveCol, newLen);
+      historyCapturedPiece = Arrays.copyOf(historyCapturedPiece, newLen);
+      historyWhitePlaced = Arrays.copyOf(historyWhitePlaced, newLen);
+      historyBlackPlaced = Arrays.copyOf(historyBlackPlaced, newLen);
+    }
+  }
+
   public EscampeBoard_part_1_2() {
     for (char[] r : board) Arrays.fill(r, EMPTY);
+    historySize = 0;
   }
 
   // =========== File I/O ===========
@@ -60,6 +80,7 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
     for (char[] r : board) Arrays.fill(r, EMPTY);
     lastMoveRow = -1;
     lastMoveCol = -1;
+    historySize = 0;
     try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
       String line;
       int rowIdx = 0;
@@ -401,8 +422,16 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
     if (pc == null) return;
     move = move.trim();
 
+    ensureHistoryCapacity();
+    historyLastMoveRow[historySize] = lastMoveRow;
+    historyLastMoveCol[historySize] = lastMoveCol;
+    historyWhitePlaced[historySize] = whitePlaced;
+    historyBlackPlaced[historySize] = blackPlaced;
+
     // Pass - reset lastMove so the opponent can freely choose their piece
     if (move.equals("E")) {
+      historyCapturedPiece[historySize] = EMPTY;
+      historySize++;
       lastMoveRow = -1;
       lastMoveCol = -1;
       return;
@@ -410,6 +439,8 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
 
     // Initial placement
     if (move.contains("/")) {
+      historyCapturedPiece[historySize] = EMPTY;
+      historySize++;
       String[] parts = move.split("/");
       char unicorn = (pc == PlayerColor.BLACK) ? BLACK_UNICORN : WHITE_UNICORN;
       char paladin = (pc == PlayerColor.BLACK) ? BLACK_PALADIN : WHITE_PALADIN;
@@ -435,12 +466,47 @@ public class EscampeBoard_part_1_2 implements interfaces.IBoard<EscampeMove, Pla
     int[] from = parseCell(parts[0]);
     int[] to   = parseCell(parts[1]);
     if (from != null && to != null) {
+      historyCapturedPiece[historySize] = board[to[0]][to[1]];
+      historySize++;
       board[to[0]][to[1]] = board[from[0]][from[1]];
       board[from[0]][from[1]] = EMPTY;
       lastMoveRow = to[0];
       lastMoveCol = to[1];
     } else {
       System.err.println("Invalid move format: " + move);
+    }
+  }
+
+  @Override
+  public void undo(EscampeMove move, PlayerColor playerRole) {
+    if (playerRole == null || historySize == 0) return;
+
+    historySize--;
+    lastMoveRow = historyLastMoveRow[historySize];
+    lastMoveCol = historyLastMoveCol[historySize];
+    whitePlaced = historyWhitePlaced[historySize];
+    blackPlaced = historyBlackPlaced[historySize];
+    char captured = historyCapturedPiece[historySize];
+
+    String mStr = move.getMove();
+    if (mStr.equals("E")) {
+      // Pass
+    } else if (mStr.contains("/")) {
+      // Placement
+      String[] parts = mStr.split("/");
+      for (String part : parts) {
+        int[] cell = parseCell(part);
+        if (cell != null) board[cell[0]][cell[1]] = EMPTY;
+      }
+    } else {
+      // Normal move
+      String[] parts = mStr.split("-");
+      int[] from = parseCell(parts[0]);
+      int[] to = parseCell(parts[1]);
+      if (from != null && to != null) {
+        board[from[0]][from[1]] = board[to[0]][to[1]];
+        board[to[0]][to[1]] = captured;
+      }
     }
   }
 

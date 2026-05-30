@@ -139,9 +139,9 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 				if (timeManager.shouldStopSoft()) {
 					break; // stop this iteration early
 				}
-				B nextBoard = board.copy();
-				nextBoard.play(move, playerRole);
-				int value = -maxValue(nextBoard, opponentRole, currentDepth - 1, -beta, -alpha, timeManager);
+				board.play(move, playerRole);
+				int value = -maxValue(board, opponentRole, currentDepth - 1, -beta, -alpha, timeManager);
+				board.undo(move, playerRole);
 				if (value > bestValue || iterBest == null) {
 					bestValue = value;
 					iterBest = move;
@@ -184,9 +184,9 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 		int value = Integer.MIN_VALUE;
         R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
 		for (M move : board.possibleMoves(playerRole)) {
-			B nextBoard = board.copy();
-			nextBoard.play(move, playerRole);
-			value = Math.max(value, -maxValue(nextBoard, opponentRole, depth - 1, -beta, -alpha, timeManager));
+			board.play(move, playerRole);
+			value = Math.max(value, -maxValue(board, opponentRole, depth - 1, -beta, -alpha, timeManager));
+			board.undo(move, playerRole);
 			alpha = Math.max(alpha, value);
 
 			// Alpha-Beta Pruning: if alpha >= beta, we can prune remaining branches

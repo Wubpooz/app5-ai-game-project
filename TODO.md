@@ -156,7 +156,7 @@
   - [ ] Moves as int primitives (no objects)
   - [x] Avoid `instanceof` checks in move generation and evaluation by using separate methods for different piece types.
   - [ ] Flat long[] transposition table
-  - [ ] Make-unmake instead of board copy
+  - [x] Make-unmake instead of board copy
   - [ ] Partial selection sort in move list
   - [ ] final methods + avoid virtual dispatch
   - [x] Use `System.arraycopy` for board copying instead of manual loops.
