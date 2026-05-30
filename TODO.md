@@ -2,7 +2,7 @@
 ## Search
 - [x] Minimax with alpha-beta pruning
 
-- [ ] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
+- [x] [Time Management](https://www.chessprogramming.org/Time_Management): Une hard limit et soft limit pour éviter les dépassements de temps. La soft limit est un seuil de temps auquel on arrête l'itération en cours et on retourne le meilleur coup trouvé jusqu'à présent, tandis que la hard limit est un seuil de temps auquel on arrête immédiatement toute recherche et retourne le meilleur coup trouvé jusqu'à présent, même si l'itération en cours n'est pas terminée. Pour estimer le budget du coup actuel, on peut utiliser une formule qui prend en compte le temps restant, le nombre de coups légaux (complexité de la position) et la phase de jeu (ouverture, milieu, fin). Par exemple:
     ```java
     public class TimeManager {
         private final long softBoundMs;
@@ -86,7 +86,7 @@
     ```
 
 
-- [ ] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
+- [x] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
 
 - [ ] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
   - [ ] [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows): when doing iterative deepening, instead of starting each deeper search with alpha=-inf and beta=+inf, we can start with a narrow window around the previous iteration's score (e.g., alpha=prev_score-50, beta=prev_score+50). This can lead to faster cutoffs if the score doesn't change much between iterations. If the search fails low or high, we can widen the window and re-search. Be careful with the choice of window size to balance between speed and the risk of re-searching.
@@ -119,7 +119,7 @@
   - $\mathcal{T}$: mobility/pass pressure — reward for our legal moves, penalty for opponent's legal moves, large penalty when we must pass, reward when opponent must pass
   - TODO: Band-aware distance (BFS ply distance) instead of Manhattan distance
 
-- [ ] Time management: 
+- [x] Time management: 
   - Spend more time in complex midgame positions (high branching factor, many legal moves).
   - Spend less time in forced/obvious positions (only 1–2 legal moves due to band constraint).
   ```java
@@ -152,17 +152,17 @@
 
 ## Optimization
 - [ ] Java optimizations:
-  - [ ] Use `System.nanoTime()` for more accurate time measurement instead of `System.currentTimeMillis()`.
+  - [x] Use `System.nanoTime()` for more accurate time measurement instead of `System.currentTimeMillis()`.
   - [ ] Moves as int primitives (no objects)
-  - [ ] Avoid `instanceof` checks in move generation and evaluation by using separate methods for different piece types.
+  - [x] Avoid `instanceof` checks in move generation and evaluation by using separate methods for different piece types.
   - [ ] Flat long[] transposition table
   - [ ] Make-unmake instead of board copy
   - [ ] Move ordering (TT/killers/history)
   - [ ] Partial selection sort in move list
   - [ ] final methods + avoid virtual dispatch
-  - [ ] Use `System.arraycopy` for board copying instead of manual loops.
-  - [ ] Avoid unnecessary object creation in the search loop (e.g., reuse move lists, transposition table entries).
-  - [ ] Preallocate arrays
+  - [x] Use `System.arraycopy` for board copying instead of manual loops.
+  - [x] Avoid unnecessary object creation in the search loop (e.g., reuse move lists, transposition table entries).
+  - [x] Preallocate arrays
   - [ ] Sort moves in place using partial selection sort to find the best move without fully sorting the list.
   - [ ] Partial selection sort: only sort the top N moves (e.g., 4) instead of the entire move list, since we only care about the best move for alpha-beta pruning.
 
@@ -171,7 +171,7 @@
 
 - [ ] Optional threading (lazy SMP): start multiple search threads with the same root position but different random seeds for move ordering. Each thread shares the transposition table, so they can benefit from each other's work. When time runs out, return the best move found by any thread.
 
-- [ ] Bitboard board representation: represent the board using bitboards (64-bit integers, `long`) for each piece type and player. This allows for very fast move generation and board evaluation using bitwise operations. (https://www.chessprogramming.org/Bitboards & https://www.chessprogramming.org/0x88)
+- [x] Bitboard board representation: represent the board using bitboards (64-bit integers, `long`) for each piece type and player. This allows for very fast move generation and board evaluation using bitwise operations. (https://www.chessprogramming.org/Bitboards & https://www.chessprogramming.org/0x88)
   - `Long.bitCount(bitboard)` to count pieces, `Long.numberOfTrailingZeros(bitboard)` to find the index of the least significant piece, etc.
 - [ ] [Principal variation search](https://www.chessprogramming.org/Principal_Variation_Search) (PVS / NegaScout): an optimization of alpha-beta that assumes the first move is the best and searches it with a full window, while subsequent moves are searched with a null window (alpha, alpha+1). If a move fails high, we re-search it with a full window.
 
@@ -216,7 +216,7 @@
 - [ ] Study the impact of each heuristic components
 - [ ] Study the impact of each optimization
 - [ ] Create levels of AI for each optimization
-- [ ] Elo rating for bots: update with $R_A' = R_A + K(S_A - E_A)$ where $E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$ and $K=32$, $S_A=1$ for win, $0.5$ for draw, $0$ for loss.
+- [x] Elo rating for bots: update with $R_A' = R_A + K(S_A - E_A)$ where $E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$ and $K=32$, $S_A=1$ for win, $0.5$ for draw, $0$ for loss.
     Sequential Probability Ratio Test (SPRT) for engine evaluation:
     https://tests.stockfishchess.org/tests/view/696a9e83cec152c6220c1d1d :
     60000 games - master vs e0bfc4b69bbe928d6f474a46560bcc3b3f6709aa diff finished
@@ -228,7 +228,7 @@
     chi^2	234.30
     dof	178
     p-value	0.30%
-- [ ] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
+- [x] use compute time at startup for other stuff since we'll use opening book and [Pondering](https://www.chessprogramming.org/Pondering)
 - [ ] Add a bar like in chess to see which side is winning
 - [ ] Mark moves as brilliant?  
 - [ ] Manim video explainer
