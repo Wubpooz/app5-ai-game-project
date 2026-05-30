@@ -14,7 +14,7 @@ public class EscampeAIPlayer implements IJoueur {
   // Helpful variables
   private PlayerColor opponentRole;
 
-  private long remainingTimeMs = 300_000; // 5 minutes in milliseconds
+  private long remainingTimeMs = 590_000; // 9:50 minutes
   // private long remainingTimeMs = 160; // for tests
 
   // Constructors
@@ -36,6 +36,7 @@ public class EscampeAIPlayer implements IJoueur {
    * @param mycolour La couleur dans laquelle vous allez jouer (-1=BLANC, 1=NOIR)
   */
   public void initJoueur(int mycolour) {
+    this.remainingTimeMs = 590_000; // reset time at the start of the game
     this.role = (mycolour == -1) ? PlayerColor.WHITE : PlayerColor.BLACK;
     this.opponentRole = (this.role == PlayerColor.WHITE) ? PlayerColor.BLACK : PlayerColor.WHITE;
     
