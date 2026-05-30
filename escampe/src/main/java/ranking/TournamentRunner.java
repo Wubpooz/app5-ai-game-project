@@ -51,10 +51,15 @@ public class TournamentRunner {
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 1, hDefault));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hDefault));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 3, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 1, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 3, hDefault));
         
         // 2. Heuristic Ablation (using AlphaBeta at depth 2)
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hNoDistance));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hNoDistance));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBandCoverage));
         
         // 3. Tuned Heuristics (using AlphaBeta at depth 2)
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSpsaFull));
@@ -63,6 +68,14 @@ public class TournamentRunner {
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hBayesNoBand));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSimplexFull));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSimplexNoBand));
+
+        // 4. Tuned Heuristics (using Negamax at depth 2)
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSpsaFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSpsaNoBand));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBayesFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBayesNoBand));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSimplexFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSimplexNoBand));
 
         int n = ranking.getAlgorithms().size();
         int pairings = n * (n - 1) / 2;
