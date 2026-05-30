@@ -129,7 +129,7 @@
   );
   ```
 
-- [ ] (Optional) NN-based evaluation function (export visualisation from [NN-SVG](https://alexlenail.me/NN-SVG/LeNet.html))
+- [ ] (Optional) NN-based evaluation function **for move ordering** (export visualisation from [NN-SVG](https://alexlenail.me/NN-SVG/LeNet.html))
   - Analysis 
     The eval function takes a board state and returns a scalar in [-1, +1]. The signal it must capture:
     - Which pieces can legally move right now (band constraint)

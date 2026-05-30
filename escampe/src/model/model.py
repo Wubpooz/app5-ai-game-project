@@ -5,8 +5,9 @@ import torch.nn.functional as F
 class ResBlock(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.l1 = nn.Linear(dim, dim)
-        self.l2 = nn.Linear(dim, dim)
+        # Add dropout after each linear as per Fix 2
+        self.l1 = nn.Sequential(nn.Linear(dim, dim), nn.Dropout(0.2))
+        self.l2 = nn.Sequential(nn.Linear(dim, dim), nn.Dropout(0.2))
         self.bn1 = nn.BatchNorm1d(dim)
         self.bn2 = nn.BatchNorm1d(dim)
 
@@ -61,8 +62,8 @@ class BandDPER(nn.Module):
         self.encoder = SharedSpatialEncoder()  # shared weights, used twice
         # Trunk: 258 -> 258 x num_res_blocks (256 Siamese + 2 escape scalars)
         self.trunk = nn.ModuleList([ResBlock(258) for _ in range(num_res_blocks)])
-        # Output head
-        self.out1 = nn.Linear(258, 64)
+        # Output head with dropout before the linear layer
+        self.out1 = nn.Sequential(nn.Dropout(0.2), nn.Linear(258, 64))
         self.out2 = nn.Linear(64, 1)
         # Direct output shortcut for forced-pass signal (bypasses trunk)
         self.w_forced_pass = nn.Parameter(torch.zeros(1))
