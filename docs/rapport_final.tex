@@ -96,6 +96,15 @@ Au-delà de la complexité combinatoire, les principales difficultés algorithmi
 \section{Choix d'Implantation et Structures de Données}
 Afin de garantir des performances optimales lors de l'exploration de l'arbre de jeu, les structures de données sous-jacentes doivent permettre une génération de coups et une évaluation d'états extrêmement rapides.
 
+\subsection{Structure Générale du Projet}
+Le code source est structuré en plusieurs packages modulaires favorisant la séparation des responsabilités :
+\begin{itemize}
+    \item \textbf{Package \texttt{game}} : Contient les abstractions fondamentales du jeu d'Escampe. \texttt{EscampeBoard} modélise le plateau et les règles de transition d'états ; \texttt{EscampeMove} gère l'encodage des déplacements ; et \texttt{EscampeAIPlayer} implémente l'interface \texttt{IJoueur} pour orchestrer l'évaluation du meilleur coup et le temps restant.
+    \item \textbf{Package \texttt{algorithms}} : Regroupe l'intelligence décisionnelle. Il est divisé en sous-packages : \texttt{algorithms.search} implémente les algorithmes d'exploration (\texttt{NegamaxKH}, \texttt{AlphaBetaKH}) régis par la classe d'ordonnancement \texttt{MoveOrderer} (Killer Moves + History Heuristic) ; \texttt{algorithms.evaluation} encapsule l'heuristique linéaire (\texttt{Heuristic}, \texttt{HeuristicConfig}) ; \texttt{Opening} gère la bibliothèque de départ ; et \texttt{TimeManager} s'occupe du budget temporel.
+    \item \textbf{Package \texttt{ranking}} : Dédié à la validation et à l'optimisation. Il contient \texttt{TournamentRunner} (simulations de tournois locaux), \texttt{AIRankingSystem} (calcul du classement Elo/SPRT), et \texttt{SimplexTuner}/\texttt{ParameterTuner} (calibrations SPSA).
+    \item \textbf{Package \texttt{io}} : Fournit les points d'entrée d'exécution. \texttt{ClientJeu} assure la communication réseau TCP avec l'arbitre externe ; \texttt{Solo} permet de lancer une partie locale directe pour le débogage ; et \texttt{Applet} gère le rendu graphique.
+\end{itemize}
+
 \subsection{Représentation du Plateau (Bitboards)}
 Nous avons opté pour une représentation du plateau basée sur des \textit{Bitboards}~\cite{cp_bitboards}. Le plateau de 6x6 cases est encodé sur des entiers de 64 bits (\texttt{long} en Java).
 \begin{itemize}
@@ -258,13 +267,11 @@ Pour l'intégration Java, BatchNorm est replié analytiquement dans les couches 
 
 BandDPER n'a pas été retenu comme heuristique principale : la latence d'inférence depuis Java reste incompatible avec les contraintes de temps par nœud de l'alpha-bêta profond. Son usage le plus prometteur reste l'ordonnancement à la racine (coût ponctuel, non répété), laissé comme piste de développement futur.
 
-% Placeholder pour un screenshot de l'entraînement ou du flowchart de BandDPER
+% Flowchart of the architecture of BandDPER
 \begin{figure}[H]
     \centering
-    % DÉCOMMENTER POUR AFFICHER L'IMAGE
-    % \includegraphics[width=0.8\textwidth]{chemin_vers_screenshot_training.png}
-    \fbox{\rule{0pt}{3in} \rule{0.8\linewidth}{0pt}} % Box vide, remplacer par l'image
-    \caption{Architecture du réseau BandDPER (encodeur CNN dual-perspective + tronc résiduel) ou courbes de perte MSE entraînement/validation.}
+    \includegraphics[width=0.85\textwidth]{model/components/dual_perspective_flowchart.png}
+    \caption{Architecture du réseau BandDPER (encodeur CNN dual-perspective + tronc résiduel à skip connections et bypass direct).}
     \label{fig:banddper_training}
 \end{figure}
 
@@ -311,9 +318,7 @@ Pour valider statistiquement qu'une modification apporte un gain Elo réel avant
 % Placeholder pour un screenshot de progression Elo
 \begin{figure}[H]
     \centering
-    % DÉCOMMENTER POUR AFFICHER L'IMAGE
-    % \includegraphics[width=0.7\textwidth]{chemin_vers_screenshot_elo.png}
-    \fbox{\rule{0pt}{3in} \rule{0.7\linewidth}{0pt}} % Box vide, remplacer par l'image
+    \includegraphics[width=0.7\textwidth]{image.png}
     \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT).}
     \label{fig:elo_ranking}
 \end{figure}
