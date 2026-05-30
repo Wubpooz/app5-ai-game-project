@@ -199,7 +199,7 @@ public class DataExport {
                 } else {
                   AlphaBeta<EscampeMove, PlayerColor, EscampeBoard> engine = 
                       whiteToMove ? engineWhite : engineBlack;
-                  move = engine.bestMove(board, whiteToMove ? PlayerColor.WHITE : PlayerColor.BLACK);
+                  move = engine.bestMove(board, whiteToMove ? PlayerColor.WHITE : PlayerColor.BLACK, 1000);
                 }
 
                 board.play(move, whiteToMove ? PlayerColor.WHITE : PlayerColor.BLACK);
