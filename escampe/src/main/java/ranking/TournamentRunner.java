@@ -53,7 +53,9 @@ public class TournamentRunner {
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 3, hDefault));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 1, hDefault));
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hDefault, true)); // Negamax with iterative deepening at depth 2
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 3, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 3, hDefault, true)); // Negamax with iterative deepening at depth 3
         
         // 2. Heuristic Ablation (using AlphaBeta at depth 2)
         ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hNoDistance));

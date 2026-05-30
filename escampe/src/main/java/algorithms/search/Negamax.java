@@ -31,6 +31,14 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	/** Algorithm max depth */
 	private int depthMax = DEPTH_MAX_DEFAULT;
 
+	/**
+	 * When true (default), uses iterative deepening from depth 1..depthMax,
+	 * returning the best move found within the time budget.
+	 * When false, goes straight to depthMax (useful for fair tournament comparisons
+	 * against fixed-depth AlphaBeta).
+	 */
+	private boolean iterativeDeepening = true;
+
 	/** Heuristic used by the max player */
 	private IHeuristic<B, R> h;
 
@@ -54,6 +62,15 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	public Negamax(R playerMaxRole, R playerMinRole, IHeuristic<B, R> h, int depthMax) {
 		this(playerMaxRole, playerMinRole, h);
 		this.depthMax = depthMax;
+	}
+
+	/**
+	 * Full constructor with iterative deepening control.
+	 * @param iterativeDeepening false to disable ID (for fair fixed-depth tournament comparisons)
+	 */
+	public Negamax(R playerMaxRole, R playerMinRole, IHeuristic<B, R> h, int depthMax, boolean iterativeDeepening) {
+		this(playerMaxRole, playerMinRole, h, depthMax);
+		this.iterativeDeepening = iterativeDeepening;
 	}
 
 	/*
@@ -108,7 +125,9 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	 */
 
 	/**
-	 * Root level search - tries all possible moves and returns the best one
+	 * Root level search. When iterativeDeepening is true (default), searches from
+	 * depth 1..depthMax and returns the best move found within the time budget.
+	 * When false, goes directly to depthMax (for fair tournament comparisons).
 	 */
 	private M negamax(B board, R playerRole, long remainingTimeMs) {
 		java.util.List<M> moves = board.possibleMoves(playerRole);
@@ -116,76 +135,81 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 			return null;
 		}
 
-		// Default to first move
 		M bestMove = moves.get(0);
-		M lastCompletedBest = bestMove;
-
 		TimeManager timeManager = new TimeManager(remainingTimeMs, moves.size());
+		int sign = playerRole.equals(playerMaxRole) ? 1 : -1;
+		R opponentRole = playerRole.equals(playerMaxRole) ? playerMinRole : playerMaxRole;
 
-		R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
+		if (iterativeDeepening) {
+			// --- Iterative deepening mode (default, used in real games) ---
+			M lastCompletedBest = bestMove;
+			for (int currentDepth = 1; currentDepth <= depthMax; currentDepth++) {
+				if (timeManager.shouldStopSoft()) break;
 
-		// Iterative deepening: increase search depth from 1..depthMax
-		for (int currentDepth = 1; currentDepth <= depthMax; currentDepth++) {
-			if (timeManager.shouldStopSoft()) {
-				break; // return last completed iteration's best move
+				int alpha = Integer.MIN_VALUE;
+				int beta = Integer.MAX_VALUE;
+				int bestValue = Integer.MIN_VALUE;
+				M iterBest = bestMove;
+
+				for (M move : moves) {
+					if (timeManager.shouldStopSoft()) break;
+					board.play(move, playerRole);
+					int value = -maxValue(board, opponentRole, -sign, currentDepth - 1, -beta, -alpha, timeManager);
+					board.undo(move, playerRole);
+					if (value > bestValue) {
+						bestValue = value;
+						iterBest = move;
+					}
+					alpha = Math.max(alpha, bestValue);
+				}
+				lastCompletedBest = iterBest;
+				bestMove = iterBest;
+				if (bestValue == Heuristic.WIN_SCORE) break;
 			}
+			return lastCompletedBest;
 
+		} else {
+			// --- Fixed-depth mode (for fair tournament comparisons) ---
 			int alpha = Integer.MIN_VALUE;
 			int beta = Integer.MAX_VALUE;
 			int bestValue = Integer.MIN_VALUE;
-			M iterBest = bestMove;
 
 			for (M move : moves) {
-				if (timeManager.shouldStopSoft()) {
-					break; // stop this iteration early
-				}
+				if (timeManager.shouldStopSoft()) break;
 				board.play(move, playerRole);
-				int value = -maxValue(board, opponentRole, currentDepth - 1, -beta, -alpha, timeManager);
+				int value = -maxValue(board, opponentRole, -sign, depthMax - 1, -beta, -alpha, timeManager);
 				board.undo(move, playerRole);
-				if (value > bestValue || iterBest == null) {
+				if (value > bestValue) {
 					bestValue = value;
-					iterBest = move;
+					bestMove = move;
 				}
 				alpha = Math.max(alpha, bestValue);
 			}
-
-			// If we completed the iteration without hitting soft stop, update lastCompletedBest
-			if (iterBest != null) {
-				lastCompletedBest = iterBest;
-				bestMove = iterBest;
-				System.out.println("Depth=" + currentDepth + ", bestMove=" + bestMove + ", lastCompletedBest=" + lastCompletedBest + ", bestValue=" + bestValue);
-			}
-			if (bestValue == Heuristic.WIN_SCORE) {
-				// Found a winning move, no need to search deeper
-				break;
-			}
+			return bestMove;
 		}
-
-		return lastCompletedBest;
 	}
 
 	/**
-	 * Maximizing player node
-	 * Returns the maximum value among all child nodes
-	 * Prunes branches when alpha >= beta
+	 * Negamax recursive node.
+	 * @param sign +1 if it's playerMaxRole's turn, -1 if it's playerMinRole's turn.
+	 *             This lets us evaluate always from playerMaxRole's perspective and negate correctly.
 	 */
-	private int maxValue(B board, R playerRole, int depth, int alpha, int beta, TimeManager timeManager) {
+	private int maxValue(B board, R playerRole, int sign, int depth, int alpha, int beta, TimeManager timeManager) {
 
 		if (timeManager.shouldStopHard()) {
-			// LOGGER.info("Hard time limit reached, returning heuristic evaluation.");
-			return h.eval(board, playerRole);
+			return sign * h.eval(board, playerMaxRole);
 		}
 		// Base case: game over or depth limit reached
 		if (board.isGameOver() || depth == 0) {
 			nbLeaves++;
-			return h.eval(board, playerRole);
+			return sign * h.eval(board, playerMaxRole);
 		}
 
 		int value = Integer.MIN_VALUE;
-        R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
+		R opponentRole = playerRole.equals(playerMaxRole) ? playerMinRole : playerMaxRole;
 		for (M move : board.possibleMoves(playerRole)) {
 			board.play(move, playerRole);
-			value = Math.max(value, -maxValue(board, opponentRole, depth - 1, -beta, -alpha, timeManager));
+			value = Math.max(value, -maxValue(board, opponentRole, -sign, depth - 1, -beta, -alpha, timeManager));
 			board.undo(move, playerRole);
 			alpha = Math.max(alpha, value);
 

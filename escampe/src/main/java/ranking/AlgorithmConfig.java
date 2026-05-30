@@ -31,11 +31,20 @@ public class AlgorithmConfig {
     private final AlgorithmType type;
     private final int depth;
     private final HeuristicConfig heuristicConfig;
+    private final boolean iterativeDeepening;
     
     public AlgorithmConfig(AlgorithmType type, int depth, HeuristicConfig heuristicConfig) {
         this.type = type;
         this.depth = depth;
         this.heuristicConfig = heuristicConfig;
+        this.iterativeDeepening = false;
+    }
+
+    public AlgorithmConfig(AlgorithmType type, int depth, HeuristicConfig heuristicConfig, boolean iterativeDeepening) {
+        this.type = type;
+        this.depth = depth;
+        this.heuristicConfig = heuristicConfig;
+        this.iterativeDeepening = iterativeDeepening;
     }
     
     public GameAlgorithm<EscampeMove, PlayerColor, EscampeBoard> createInstance(
@@ -47,7 +56,8 @@ public class AlgorithmConfig {
             case MINIMAX:
                 return new MiniMax<>(playerRole, opponentRole, heuristic, depth);
             case NEGAMAX:
-                return new Negamax<>(playerRole, opponentRole, heuristic, depth);
+                // iterativeDeepening=false for fair fixed-depth tournament comparison vs AlphaBeta
+                return new Negamax<>(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
             default:
                 throw new IllegalArgumentException("Unknown algorithm type: " + type);
         }
