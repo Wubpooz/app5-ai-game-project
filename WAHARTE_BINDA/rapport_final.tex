@@ -13,6 +13,7 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{enumitem}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -70,8 +71,47 @@ Ce rapport détaille la conception et la mise en œuvre d'un agent autonome capa
 Dans le cadre de ce projet, l'objectif principal est de développer une Intelligence Artificielle capable de conduire de façon autonome une partie d'Escampe en temps limité (300s à 900s par joueur). L'agent doit communiquer avec un arbitre validant les coups et garantissant le respect des contraintes temporelles.
 Le jeu d'Escampe se caractérise par des règles de déplacement atypiques (dépendance à la bande ciblée par l'adversaire) et une asymétrie de la topologie du plateau. Ces spécificités requièrent des choix algorithmiques pointus, s'écartant parfois des implémentations classiques des jeux à information parfaite.
 
+\subsection{Fin de Partie}
+Une partie se termine dès qu'un joueur capture la licorne adverse en y déplaçant un paladin. Aucun score partiel n'existe — seule la capture compte. Pour les agents, il convient d'ajouter un mécanisme de détection de répétition de position afin d'éviter les boucles infinies.
+
+\subsection{Analyse de la Complexité}
+
+\paragraph{Facteur de branchement.}
+Chaque pièce peut se déplacer dans au plus 4 directions lors de son premier saut, puis 3 directions pour les suivants (sans revenir sur ses pas), avec jusqu'à 3 sauts selon sa bande. Dans le pire des cas, avec 6 pièces :
+\[
+b_{\max} = 6 \times (4 + 2 \times 3) = 60 \text{ coups légaux par tour.}
+\]
+En pratique, la contrainte de bande, les bords du plateau et les blocages ramènent ce facteur à 15--25 coups légaux en position typique de milieu de partie, ce qui justifie l'emploi d'un élagage Alpha-Bêta agressif.
+
+\paragraph{Majorant du nombre d'états.}
+En modélisant un état de jeu par les positions des 12 pièces parmi 36 cases et la bande imposée par le dernier coup (4 valeurs), on obtient :
+\[
+\mathcal{m} = \binom{36}{1}\binom{35}{5}\binom{30}{1}\binom{29}{5} \times 4 = \frac{36!}{(5!)^2\,(36-12)!} \times 4 \approx 1{,}67 \times 10^{14}
+\]
+états distincts. Ce chiffre confirme que toute exploration exhaustive est impossible et que les heuristiques et l'élagage sont indispensables.
+
+\paragraph{Sources de difficulté.}
+Au-delà de la complexité combinatoire, les principales difficultés algorithmiques sont : (i) la contrainte de bande qui conditionne les pièces jouables au tour suivant, créant des effets de tempo et de forçage ; (ii) l'absence de simplification rapide (pas de capture de pions), qui allonge les séquences tactiques ; (iii) l'importance du placement initial qui engendre une forte variabilité de départ.
+
 \section{Choix d'Implantation et Structures de Données}
 Afin de garantir des performances optimales lors de l'exploration de l'arbre de jeu, les structures de données sous-jacentes doivent permettre une génération de coups et une évaluation d'états extrêmement rapides.
+
+\subsection{Structure Générale du Projet}
+Le code source est structuré en plusieurs packages modulaires favorisant la séparation des responsabilités et le découplage des composants :
+\begin{itemize}
+    \item \textbf{Package \texttt{interfaces}} : Définit les contrats essentiels pour l'ensemble du projet : \texttt{IJoueur} (contrat requis par l'arbitre), \texttt{IBoard} (abstraction du plateau), \texttt{IMove} (représentation générique d'un coup), \texttt{IRole} (rôle du joueur), et \texttt{IHeuristic} (contrat pour les fonctions d'évaluation heuristique). Ce package garantit un couplage faible et facilite la modularité.
+    \item \textbf{Package \texttt{game}} : Contient les implémentations physiques et conceptuelles du jeu. \texttt{EscampeBoard} modélise l'état et les transitions du plateau par le biais de Bitboards ; \texttt{EscampeMove} représente un déplacement (coordonnées de départ, intermédiaires, d'arrivée et contrainte de bande) ; et \texttt{EscampeAIPlayer} implémente le joueur autonome, gérant l'approfondissement itératif et la délégation de la recherche.
+    \item \textbf{Package \texttt{algorithms}} : Regroupe la logique de décision. Il se subdivise en :
+        \begin{itemize}
+            \item \texttt{algorithms.search} : Implémente les algorithmes de recherche (\texttt{NegamaxKH}, \texttt{AlphaBetaKH}) ainsi que la classe d'ordonnancement \texttt{MoveOrderer} (Killer Moves + History Heuristic).
+            \item \texttt{algorithms.evaluation} : Contient la fonction d'évaluation linéaire (\texttt{Heuristic}, \texttt{HeuristicConfig}).
+            \item \texttt{Opening} : Gère la bibliothèque de départ (ouvertures pré-calculées).
+            \item \texttt{TimeManager} : Calcule dynamiquement le budget temporel restant.
+        \end{itemize}
+    \item \textbf{Package \texttt{model}} : Contient la classe \texttt{DataExport} chargée de sérialiser et d'exporter les états de jeu joués au format JSON. Ces données d'apprentissage alimentent le pipeline d'entraînement Python du modèle de réseau de neurones BandDPER.
+    \item \textbf{Package \texttt{ranking}} : Dédié à la validation et aux tournois comparatifs. Il contient \texttt{TournamentRunner} (simulation locale en parallèle), \texttt{AIRankingSystem} (suivi des classements Elo et tests statistiques SPRT), et \texttt{SimplexTuner} (implémentation de l'optimisation SPSA pour l'heuristique).
+    \item \textbf{Package \texttt{io}} : Gère les interfaces d'exécution. \texttt{ClientJeu} assure la communication réseau TCP avec le serveur de l'arbitre ; \texttt{Solo} permet de lancer une partie locale directe entre deux bots pour le débogage ; et \texttt{Applet} fournit le rendu graphique visuel.
+\end{itemize}
 
 \subsection{Représentation du Plateau (Bitboards)}
 Nous avons opté pour une représentation du plateau basée sur des \textit{Bitboards}~\cite{cp_bitboards}. Le plateau de 6x6 cases est encodé sur des entiers de 64 bits (\texttt{long} en Java).
@@ -83,9 +123,11 @@ Nous avons opté pour une représentation du plateau basée sur des \textit{Bitb
 \subsection{Optimisations d'Implémentation}
 Plusieurs choix techniques ont été faits pour maximiser le nombre de nœuds explorés par seconde :
 \begin{itemize}
-    \item Suppression des appels \texttt{instanceof} lors de la génération des coups via des méthodes dédiées par type de pièce.
-    \item Utilisation de \texttt{System.nanoTime()} pour une résolution temporelle accrue sans coût de changement de contexte de l'OS.
-    \item \textbf{[À COMPLÉTER]} Table de transposition via Zobrist Hashing~\cite{cp_zobrist} : utilisation d'une table de hachage plate (un tableau de \texttt{long}) pour éviter la réévaluation des positions déjà rencontrées, y compris la détection de répétition de position.
+    \item \textbf{Suppression des appels \texttt{instanceof}} lors de la génération des coups via des méthodes dédiées par type de pièce, évitant le coût du dispatch polymorphique à chaque nœud.
+    \item \textbf{Mesure temporelle haute résolution} : utilisation de \texttt{System.nanoTime()} plutôt que \texttt{System.currentTimeMillis()} pour une résolution à la nanoseconde sans dépendance à l'horloge système.
+    \item \textbf{Stratégie Make-Unmake} (annulation de coup) : plutôt que de cloner le plateau à chaque nœud de l'arbre, les coups sont joués sur le plateau courant puis défaits après évaluation (\texttt{board.undo(move, role)}). Cette approche élimine toute allocation mémoire dans la boucle de recherche et réduit la pression sur le \textit{Garbage Collector}.
+    \item \textbf{Pré-allocation des structures} : les tableaux de positions de pièces (paladins, licornes) et les masques de Bitboards sont alloués une seule fois. Le tri de la liste des coups est réalisé en place (\textit{insertion sort} sans copie, cf. section~\ref{sec:move_ordering}).
+    \item \textbf{Table de transposition (Zobrist Hashing)~\cite{cp_zobrist}} : le schéma d'encodage (XOR de valeurs aléatoires 64 bits par pièce et par case, entrées de table stockant profondeur, type de nœud, score et meilleur coup) a été entièrement conçu mais non intégré dans la version finale par contrainte de temps. Elle constitue l'optimisation la plus prometteuse pour des versions futures, pouvant notamment permettre la détection de répétition de position.
 \end{itemize}
 
 \section{Algorithmes de Recherche du Meilleur Coup}
@@ -98,16 +140,24 @@ Nous avons implémenté l'algorithme Negamax (une variante élégante du Minimax
 Pour exploiter au mieux le temps imparti, la recherche est structurée autour d'un approfondissement itératif~\cite{cp_iterative_deepening}. L'algorithme explore l'arbre progressivement : à profondeur 1, puis 2, puis 3, et ainsi de suite jusqu'à la limite \texttt{depthMax}. 
 À chaque nouvelle itération de profondeur, le temps écoulé est vérifié via notre limite de calcul logicielle (\textit{Soft Bound}). Si cette limite est atteinte en cours d'itération, l'algorithme abandonne l'itération incomplète en cours et renvoie immédiatement le meilleur coup validé lors de la \textit{dernière itération complétée}. Ce mécanisme garantit qu'un coup fiable et profondément évalué est toujours disponible sans risque de dépassement.
 
-\textbf{[À COMPLÉTER]} \textit{Aspiration Windows} : utilisation de fenêtres de recherche réduites autour du score précédent pour maximiser les coupures d'élagage.
+Une amélioration envisagée mais non intégrée dans les délais du projet est l'\textit{Aspiration Windows} : au lieu de relancer chaque itération avec une fenêtre pleine ($\alpha = -\infty$, $\beta = +\infty$), on initialiserait $\alpha$ et $\beta$ autour du score de la profondeur précédente (par exemple $\pm 50$). En cas d'échec (\textit{fail-low} ou \textit{fail-high}), la fenêtre serait élargie et la recherche relancée. Cette technique peut réduire significativement le nombre de nœuds à explorer lorsque le score est stable entre profondeurs successives.
 
-\subsection{Ordonnancement des Coups et Élagage Sélectif (Move Ordering \& Pruning)}
-\textit{\% TODO: Détailler les techniques d'ordonnancement implémentées.}
+\subsection{Ordonnancement des Coups et Élagage Sélectif}
+\label{sec:move_ordering}
 
-Un élagage Alpha-Bêta est maximal lorsque les meilleurs coups sont explorés en premier~\cite{cp_move_ordering}.
-\begin{itemize}
-    \item \textbf{[À COMPLÉTER]} \textit{Transposition Table Move} et \textit{Killer Heuristic}~\cite{cp_killer} : essai prioritaire du meilleur coup de la profondeur précédente et des coups ayant provoqué des coupures ailleurs dans l'arbre.
-    \item \textbf{[À COMPLÉTER]} \textit{Null-move Pruning}~\cite{cp_nullmove} et \textit{Late Move Reduction}~\cite{cp_lmr} : élagage ou réduction de profondeur pour les branches jugées non prometteuses (futility pruning).
-\end{itemize}
+L'efficacité de l'élagage Alpha-Bêta dépend directement de la qualité de l'ordonnancement des coups~\cite{cp_move_ordering} : dans le cas idéal, chaque nœud MIN ne considère qu'un seul coup (l'élagage est immédiat). Les deux techniques suivantes, encapsulées dans la classe \texttt{MoveOrderer}, ont été implémentées.
+
+\paragraph{Killer Heuristic~\cite{cp_killer}.}
+À chaque profondeur de l'arbre, on maintient un tableau de 2 \textit{killer moves} — coups ayant provoqué une coupure bêta dans un nœud frère à la même profondeur. Ces coups sont essayés en priorité (score fixe \texttt{KILLER\_SCORE} = 900\,000), car il est probable qu'ils causent à nouveau une coupure dans le nœud courant. L'enregistrement suit une file FIFO à 2 slots : le nouveau killer déplace le premier, qui passe en second slot, préservant ainsi un \textit{backup} fiable.
+
+\paragraph{History Heuristic.}
+Un tableau plat \texttt{historyTable[36 $\times$ 36]} indexé par l'encodage du coup (case de départ $\times$ 36 + case d'arrivée, soit 1\,296 entrées sur un plateau 6$\times$6) accumule un score à chaque coupure bêta, pondéré par $\text{profondeur}^2$. Ce poids favorise les coupures profondes, statistiquement plus significatives. Les coups historiquement les plus coupants remontent naturellement en tête de liste sans aucun coût d'allocation.
+
+\paragraph{Tri in-place par insertion.}
+L'ordonnancement combine les deux scores (killer prioritaire, puis historique) et trie la liste de coups par insertion directement dans l'objet \texttt{ArrayList} renvoyé par \texttt{possibleMoves()}. Le tri par insertion est optimal pour de petites listes — le nombre de coups légaux en Escampe ne dépasse généralement pas 30.
+
+\paragraph{Techniques non implémentées.}
+Le \textit{Transposition Table Move} (essai en tête de liste du meilleur coup issu de la table de transposition~\cite{cp_killer}), le \textit{Null-move Pruning}~\cite{cp_nullmove} et le \textit{Late Move Reduction}~\cite{cp_lmr} ont été identifiés comme des améliorations à fort potentiel, mais n'ont pas été intégrés dans les délais du projet. Ils constituent des priorités pour des versions ultérieures.
 
 \section{Fonction d'Évaluation (Heuristiques)}
 L'évaluation des feuilles de l'arbre de recherche se doit d'être précise tout en demeurant très rapide à calculer. Notre heuristique est une combinaison linéaire de plusieurs signaux topologiques.
@@ -121,18 +171,143 @@ La fonction d'évaluation s'articule autour des métriques suivantes :
     \item \textbf{Pression Temporelle et Mobilité} : Récompense accordée pour un nombre de coups légaux plus élevé, et forte pénalité lorsqu'un joueur est forcé de passer son tour en raison du mécanisme de contrainte.
 \end{enumerate}
 
-\subsection{Intégration d'un Modèle d'Évaluation Profond : BandDPER}
-\textit{\% TODO: Mettre ici un petit résumé de BandDPER si vous avez utilisé le réseau de neurones en move ordering, sinon mentionnez que ça a été exploré comme alternative.}
+\paragraph{Calibration des poids par SPSA.}
+Les neuf poids de la formule ont été calibrés empiriquement via l'algorithme SPSA (\textit{Simultaneous Perturbation Stochastic Approximation}), une méthode de descente de gradient stochastique particulièrement adaptée à l'optimisation de fonctions d'évaluation de jeux~\cite{cp_testing}. À chaque itération, les paramètres sont perturbés dans deux directions aléatoires ($\pm \delta$), deux parties sont jouées (une dans chaque configuration), et le gradient estimé est utilisé pour mettre à jour les poids. Le processus a été exécuté sur 50 itérations avec 16 paires de parties par itération (32 parties/itération), soit 1\,600 parties par run, en parallèle sur tous les cœurs disponibles.
 
-Bien que l'heuristique manuelle soit performante, les contraintes spatiales fortement non linéaires d'Escampe (notamment la topologie des bandes) se prêtent bien à l'apprentissage. Le modèle \textbf{BandDPER} (Band-Aware Dual-Perspective Equivariant ResNet) a été conçu comme fonction d'évaluation alternative ou support à l'ordonnancement.
+Une étude d'ablation a révélé que le terme de contrôle des bandes ($w_7 \mathcal{BC}$) ne contribuait pas positivement : la configuration à 7 paramètres (termes de bande forcés à zéro) surpassait la configuration à 9 paramètres dans les tests croisés. La configuration finale retenue (\texttt{createAblated("bandcoverage")}) exclut donc ce terme — un résultat contre-intuitif au vu de l'importance du mécanisme de bandes dans les règles du jeu, mais confirmé statistiquement.
 
-% Placeholder pour un screenshot de l'entraînement ou du flowchart de BandDPER
+\subsection{Exploration d'une Évaluation par Réseau de Neurones : BandDPER}
+
+Bien que l'heuristique manuelle soit performante, les contraintes spatiales fortement non linéaires d'Escampe se prêtent bien à l'apprentissage automatique. Le modèle \textbf{BandDPER} (\textit{Band-Aware Dual-Perspective Equivariant ResNet}) a été conçu comme fonction d'évaluation alternative ou support à l'ordonnancement des coups.
+
+\subsubsection*{Choix du type de modèle}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{p{1.8cm} p{6.5cm} p{4.5cm}}
+\toprule
+Modèle & Notes & Recommandation \\
+\midrule
+MLP & Rapide, mais aucune conscience spatiale ni raisonnement relationnel & À éviter \\
+CNN & Exploite les motifs spatiaux locaux et l'équivariance par translation & Acceptable, légèrement surdimensionné \\
+NNUE & Mises à jour incrémentales rapides, conception dual-perspective, activations ClippedReLU & Trop conçu pour la taille du problème, mais le dual-perspective et le ClippedReLU sont empruntés \\
+ResNet & Bon si une évaluation de base existe, sans conscience spatiale intrinsèque & Retenu \\
+GNN & Invariant aux symétries, mais graphe dynamique, complexe et lent & À éviter \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des architectures candidates pour la fonction d'évaluation.}
+\label{tab:existing-models}
+\end{table}
+
+La combinaison retenue est un \textbf{ResNet dual-perspective avec encodeur CNN spatial}, inspirée du design NNUE~\cite{cp_nnue} (dual-perspective, ClippedReLU, raccourci de sortie direct) et des réseaux siamois~\cite{bromley1993}.
+
+\subsubsection*{Architecture}
+
+BandDPER repose sur six composants principaux : (i) un encodeur CNN spatial siamois à poids partagés, (ii) des canaux d'entrée encodant la topologie des bandes et les contraintes légales, (iii) une carte d'attaquants relative à la licorne (inspirée de l'encodage HalfKP de NNUE), (iv) un tronc résiduel avec ClippedReLU, (v) une injection scalaire des comptes d'échappatoire, et (vi) un raccourci de sortie direct pour le signal de passe forcé.
+
+\paragraph{Encodeur spatial partagé (\texttt{SharedSpatialEncoder}).}
+Chaque perspective est encodée séparément via le même réseau (poids partagés, principe des réseaux siamois~\cite{bromley1993}), sous la forme d'un tenseur $[B, 16, 6, 6]$ représentant 16 canaux de caractéristiques :
+
+\begin{table}[H]
+\centering
+\begin{tabular}{p{1.0cm} p{5.8cm} p{2.5cm}}
+\toprule
+Canal & Contenu & Type \\
+\midrule
+0 & Positions de mes paladins & Dynamique 0/1 \\
+1 & Position de ma licorne & Dynamique 0/1 \\
+2 & Positions des paladins adverses & Dynamique 0/1 \\
+3 & Position de la licorne adverse & Dynamique 0/1 \\
+4 & Masque des cases à bande 1 & \textbf{Fixe} 0/1 \\
+5 & Masque des cases à bande 2 & \textbf{Fixe} 0/1 \\
+6 & Masque des cases à bande 3 & \textbf{Fixe} 0/1 \\
+7 & Masque de contrainte de départ & Dynamique 0/1 \\
+8--10 & Cases d'atterrissage légales (bandes 1, 2, 3) & Dynamique 0/1 \\
+11--14 & Taux d'occupation par rangée/colonne (moi / adv.) & Dynamique $[0,1]$ \\
+15 & Carte d'attaquants relat. à la licorne & Dynamique 0/1 \\
+\bottomrule
+\end{tabular}
+\caption{Canaux d'entrée pour chaque tenseur de perspective $[B, 16, 6, 6]$.}
+\label{tab:input-channels}
+\end{table}
+
+Le canal 15 place les paladins adverses dans un référentiel centré sur notre licorne (ancrage en (2,2)), inspiré de l'encodage HalfKP de NNUE~\cite{cp_nnue}. Les canaux 8--10 rendent le mécanisme de forçage de tempo explicitement visible. Les canaux 4--6 (masques de bandes) sont fixes et encodent la topologie non-uniforme du plateau.
+
+L'encodeur projette chaque tenseur en un vecteur de dimension 128 via : Conv2d$(16\to32, 3{\times}3)$ $\to$ BN $\to$ ReLU $\to$ Conv2d$(32\to64, 3{\times}3,\, \text{dil.}=2)$ $\to$ BN $\to$ ReLU $\to$ Linear$(2304\to128)$ $\to$ BN $\to$ ClippedReLU$[0,1]$. La dilatation 2 élargit le champ réceptif à $5{\times}5$, capturant les motifs de mouvement à moyenne portée.
+
 \begin{figure}[H]
     \centering
-    % DÉCOMMENTER POUR AFFICHER L'IMAGE
-    % \includegraphics[width=0.8\textwidth]{chemin_vers_screenshot_training.png}
-    \fbox{\rule{0pt}{3in} \rule{0.8\linewidth}{0pt}} % Box vide, remplacer par l'image
-    \caption{Visualisation de l'architecture ou des courbes d'entraînement du modèle BandDPER.}
+    \includegraphics[width=0.85\textwidth]{model/components/SSE.png}
+    \caption{Structure de l'encodeur spatial partagé (Shared Spatial Encoder) utilisé pour chaque perspective (poids partagés).}
+    \label{fig:shared-spatial-encoder}
+\end{figure}
+
+\paragraph{Fusion et tronc résiduel.}
+Les deux embeddings (256 dimensions) sont concaténés avec deux scalaires normalisés — le nombre de coups légaux de chaque licorne (échappatoire) — formant un vecteur de 258 dimensions. Ce vecteur traverse 3 \texttt{ResBlocks} de même dimension (Linear $\to$ Dropout(0.2) $\to$ BN $\to$ ReLU $\to$ Linear $\to$ BN, puis connexion résiduelle + ClippedReLU). Les 3 niveaux correspondent aux trois abstractions naturelles du jeu : proximité/licorne-relative, interaction de bandes/tempo, forçage/échappatoire.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{model/components/residual_trunk.png}
+    \caption{Structure du tronc résiduel avec blocs de correction résiduels (skip connections).}
+    \label{fig:residual-trunk}
+\end{figure}
+
+\paragraph{Tête de sortie et raccourci.}
+Linear$(258\to64)$ $\to$ ReLU $\to$ Linear$(64\to1)$ $\to$ $\tanh$, produisant un scalaire dans $[-1,+1]$. Un paramètre appris unique (\texttt{w\_forced\_pass}) s'additionne directement à la sortie brute sans traverser le tronc, inspiré du raccourci PSQT de Stockfish HalfKAv2~\cite{cp_nnue}. Ce bypass garantit un gradient fort pour les positions de passe forcé ($\sim$2--5\% du corpus), sans surcharger le tronc.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{model/components/output_head.png}
+    \caption{Structure de la tête de sortie avec injection directe du signal de passe forcé (raccourci direct).}
+    \label{fig:output-head}
+\end{figure}
+
+\paragraph{Bilan paramétrique.}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{p{7.5cm} p{2.5cm}}
+\toprule
+Composant & Paramètres \\
+\midrule
+Encodeur partagé (utilisé $\times 2$, poids identiques) & $\sim$312\,000 \\
+Tronc résiduel (3 ResBlocks, dim=258) & $\sim$402\,648 \\
+Tête de sortie & $\sim$16\,577 \\
+\textbf{Total} & \textbf{$\sim$730\,625} \\
+\bottomrule
+\end{tabular}
+\caption{Compte des paramètres par composant ($\approx$ 2,9 Mo en float32).}
+\label{tab:parameter-count}
+\end{table}
+
+Une variante allégée (\texttt{embed\_dim=64}, 2 ResBlocks) atteint $\sim$185K paramètres pour une intégration plus rapide.
+
+\subsubsection*{Génération des données et entraînement}
+
+Les étiquettes sont générées par \textbf{amorçage Minimax} : pour chaque position échantillonnée en auto-jeu, un alpha-bêta à profondeur 4--6 calcule le score normalisé dans $[-1,+1]$. On vise 50K--100K positions labélisées. Les exemples stockent des triplets \texttt{(état, bande\_dernier\_coup, label)} pour conserver l'information de contrainte de bande et de passe forcé.
+
+L'entraînement utilise une perte MSE, l'optimiseur AdamW ($\text{lr}=10^{-3}$, weight decay $10^{-4}$), un scheduler \textit{CosineAnnealingWarmRestarts} sur 40 époques (batch 256, split 90/10), et un \textit{gradient clipping} à 1.0. Les poids sont initialisés par Xavier uniforme (gain 0,5).
+
+\subsubsection*{Pipeline d'export et optimisations envisagées}
+
+Pour l'intégration Java, BatchNorm est replié analytiquement dans les couches adjacentes avant l'export (éliminant les divisions au moment de l'inférence), puis les poids sont sérialisés en JSON ou exportés via ONNX Runtime (latence cible $\sim$1--2 µs pour le modèle INT8 de 25K paramètres quantifiés). Une \textbf{tête de politique} ajoutant une distribution sur les $\sim$96 coups légaux a été envisagée pour améliorer l'ordonnancement des coups à la racine.
+
+\subsubsection*{Limites, ressources et statut d'intégration}
+
+Le modèle pré-entraîné BandDPER et le jeu de données d'Escampe généré pour son apprentissage sont disponibles publiquement :
+\begin{itemize}
+    \item \textbf{Modèle Hugging Face} : \url{https://huggingface.co/Bluefir/BandDPER}
+    \item \textbf{Dataset Hugging Face} : \url{https://huggingface.co/datasets/Bluefir/escampe-dataset}
+\end{itemize}
+Pour plus d'informations techniques détaillées sur l'architecture, le processus d'entraînement et l'équivariance du modèle, veuillez consulter le document PDF dédié au modèle BandDPER (\texttt{model/BandDPER.pdf}).
+
+BandDPER n'a pas été retenu comme heuristique principale : la latence d'inférence depuis Java reste incompatible avec les contraintes de temps par nœud de l'alpha-bêta profond. Son usage le plus prometteur reste l'ordonnancement à la racine (coût ponctuel, non répété), laissé comme piste de développement futur.
+
+% Flowchart of the architecture of BandDPER
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{model/components/dual_perspective_flowchart.png}
+    \caption{Architecture du réseau BandDPER (encodeur CNN dual-perspective + tronc résiduel à skip connections et bypass direct).}
     \label{fig:banddper_training}
 \end{figure}
 
@@ -144,7 +319,15 @@ L'issue de la partie dépend grandement du positionnement initial. Contrairement
     \item \textbf{Dispersion sur les colonnes} : Éviter les grappes de Paladins qui se bloquent mutuellement.
     \item \textbf{Sécurité de la Licorne} : Ne pas murer la Licorne avec ses propres pièces, tout en s'assurant qu'elle ne soit pas au centre géométrique sans couverture, privilégiant les cases "double-bande" pour l'équilibre entre mobilité et défense.
 \end{itemize}
-Différentes stratégies (\textit{Balanced}, \textit{Central Pressure}) ont été testées pour varier les parties et éviter la prévisibilité. Pendant le temps de calcul disponible au démarrage de l'application, l'agent utilise le \textit{Pondering}~\cite{cp_pondering} pour anticiper.
+Différentes stratégies (\textit{Balanced}, \textit{Central Pressure}, \textit{Symmetric}…) sont tirées aléatoirement pour varier les parties et éviter la prévisibilité. En dehors de la phase de placement, l'agent met à profit les temps de réponse de l'arbitre grâce au \textbf{Pondering}~\cite{cp_pondering} : après avoir joué son coup, il prédit le meilleur coup adverse (100 ms de recherche rapide), applique ce coup hypothétique sur une copie du plateau, puis lance en arrière-plan un thread de recherche profonde (budget 4\,s). Si l'adversaire joue effectivement le coup prédit (\textit{ponder hit}), la réponse est déjà calculée et jouée instantanément, économisant du temps sur le budget principal. En cas d'échec (\textit{ponder miss}), le thread est interrompu et la recherche repart de zéro normalement.
+
+\subsection{Stratégie par Phase de Jeu}
+Une stratégie différenciée par phase améliore significativement les performances :
+\begin{description}
+    \item[Début de partie] Placement équilibré couvrant plusieurs bandes (1, 2, 3). Licorne protégée derrière des Paladins sans être enfermée. Éviter les couloirs directs vers sa Licorne.
+    \item[Milieu de partie] Jouer le tempo : choisir les cases d'arrivée pour imposer une mauvaise bande adverse ou forcer un passe. Créer des menaces doubles sur la Licorne tout en maintenant une défense active. Limiter les coups qui offrent une bande favorable à l'adversaire.
+    \item[Fin de partie] Chercher les séquences forcantes (capture en 1--3 coups) via une recherche plus profonde grâce à l'approfondissement itératif et à la réduction du budget temporel. En défense, maximiser la mobilité de la Licorne et casser les lignes d'attaque.
+\end{description}
 
 \section{Gestion du Temps Réel}
 \label{sec:time}
@@ -164,20 +347,52 @@ La communication avec le serveur impose des temps limites stricts sous peine de 
 Les performances de l'IA ont été évaluées via un moteur de test autonome opposant plusieurs versions de notre agent.
 
 \subsection{Évaluation Elo et Test SPRT}
-L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées grâce au Sequential Probability Ratio Test (SPRT)~\cite{cp_testing} sur des milliers de parties générées automatiquement. Ce processus itératif garantit statistiquement qu'une modification logicielle apporte un gain Elo réel avant d'être validée.
+L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées via un système de tournoi automatique (\texttt{TournamentRunner}) opposant de multiples configurations de notre agent. Le classement repose sur le rating Elo avec mise à jour $R' = R + K(S - E)$, où $E = 1/(1 + 10^{(R_B - R_A)/400})$ and $K = 32$. Les configurations testées incluent différentes profondeurs (2 à 6), les deux algorithmes de recherche (AlphaBetaKH et NegamaxKH), les trois variants d'heuristique (Default, SimplexFull, BandCoverage-ablated) et l'activation ou non du Pondering.
+
+Pour valider statistiquement qu'une modification apporte un gain Elo réel avant de la valider, nous utilisons le \textbf{SPRT}~\cite{cp_testing} (\textit{Sequential Probability Ratio Test}). Le SPRT compare deux hypothèses : $H_0$ (les deux agents sont équivalents, Elo $= 0$) contre $H_1$ (l'un est meilleur, Elo $> 0$). Le test s'arrête dès que les données accumulées sont suffisantes pour accepter ou rejeter $H_0$ au seuil de confiance fixé (95\%), évitant de jouer des parties inutiles. Ce processus itératif, inspiré des pratiques de Stockfish, garantit que seules les améliorations réelles progressent vers la version finale.
 
 % Placeholder pour un screenshot de progression Elo
 \begin{figure}[H]
     \centering
-    % DÉCOMMENTER POUR AFFICHER L'IMAGE
-    % \includegraphics[width=0.7\textwidth]{chemin_vers_screenshot_elo.png}
-    \fbox{\rule{0pt}{3in} \rule{0.7\linewidth}{0pt}} % Box vide, remplacer par l'image
+    \includegraphics[width=0.7\textwidth]{image.png}
     \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT).}
     \label{fig:elo_ranking}
 \end{figure}
 
 \subsection{Validation de la Conduite Autonome}
 Les protocoles de communication avec l'arbitre ont été validés localement en s'assurant qu'aucun dépassement de délai n'intervenait et que tous les coups générés restaient strictement conformes aux règles topologiques du jeu.
+
+\section{Bilan des Fonctionnalités et Statut du TODO}
+\label{sec:todo_status}
+
+Afin de mesurer le travail accompli au cours du projet et de structurer les développements futurs, un suivi rigoureux a été maintenu sous la forme d'un tableau d'objectifs (TODO). Cette section dresse le bilan des fonctionnalités implémentées, validées et de celles envisagées comme perspectives d'amélioration.
+
+\subsection{Fonctionnalités Entièrement Implémentées et Validées}
+\begin{itemize}
+    \item \textbf{Moteur de Recherche et Pruning} : Implémentation complète de l'algorithme \texttt{Negamax} avec élagage Alpha-Bêta symétrique. L'approfondissement itératif (\textit{Iterative Deepening}) a été déployé avec succès, garantissant une flexibilité absolue face aux limites de temps de réflexion.
+    \item \textbf{Gestion Fine du Temps} : Mise en œuvre du \texttt{TimeManager} avec un double niveau de sécurité (\textit{Soft Bound} pour clore proprement la recherche à la fin d'une profondeur donnée, et \textit{Hard Bound} coupant instantanément l'exécution récursive du minimax en cas d'urgence). Le temps est mesuré à haute résolution via \texttt{System.nanoTime()}.
+    \item \textbf{Ordonnancement des Coups} : Intégration d'un ordonnanceur de coups (\texttt{MoveOrderer}) combinant l'heuristique des coups tueurs (\textit{Killer Heuristic} avec FIFO à 2 slots) et l'heuristique de l'historique (\textit{History Heuristic} pondérée par la profondeur au carré). Le tri est réalisé \textit{in-place} pour minimiser l'impact mémoire.
+    \item \textbf{Heuristiques Linéaires Calibrées} : Conception d'une formule d'évaluation combinant la proximité d'attaque, la proximité de défense, la mobilité/escapabilité de la licorne, le contrôle de bande et la pression de tempo. Ces poids ont été calibrés par optimisation stochastique SPSA. L'analyse d'ablation a conduit à exclure le terme de contrôle des bandes pour de meilleures performances (variant \texttt{BandCoverage-ablated}).
+    \item \textbf{Bibliothèque d'Ouvertures et Réflexion en Temps Masqué} : Intégration d'un livre d'ouvertures diversifié (Balanced, Central Pressure, Symmetric, Flanking, etc.) assurant une bonne couverture de départ. Déploiement du mécanisme de \textit{Pondering} via un thread d'arrière-plan analysant le coup adverse supposé pendant son temps de réflexion (avec gestion des cas de \textit{ponder hit} et \textit{ponder miss}).
+    \item \textbf{Optimisations Système et Représentation} : Passage d'une représentation matricielle classique à des Bitboards (\texttt{long} de 64 bits en Java), élimination des vérifications \texttt{instanceof} et implémentation du mécanisme \textit{Make-Unmake} pour éviter le clonage d'objets et stabiliser le Garbage Collector.
+    \item \textbf{Conception du Modèle de Deep Learning} : Modélisation, génération de données (Minimax bootstrapping à profondeur 5, 50K-100K positions), entraînement sous PyTorch du modèle BandDPER, et intégration des mécanismes d'export (repliement analytique de BatchNorm).
+\end{itemize}
+
+\subsection{Fonctionnalités Conçues, Rejetées ou Non Retenues}
+\begin{itemize}
+    \item \textbf{Contrôle de Bande dans l'Heuristique} : Bien que central dans les règles du jeu, le contrôle manuel des bandes a été rejeté après tests SPRT et ablation, car il nuisait statistiquement au classement Elo global de l'agent.
+    \item \textbf{Utilisation Directe du Réseau de Neurones en Jeu} : Le réseau BandDPER n'a pas été retenu comme fonction d'évaluation principale dans l'arbre en raison de sa latence d'évaluation trop élevée par rapport à l'heuristique linéaire optimisée en Java. Il est en revanche préconisé pour l'ordonnancement à la racine.
+    \item \textbf{Noyaux Asymétriques $1\times6$/$6\times1$ dans l'Encoder} : Rejetés au profit de noyaux $3\times3$ standard à la suite d'une meilleure modélisation des mouvements brisés d'Escampe (qui touchent aussi les diagonales).
+\end{itemize}
+
+\subsection{Perspectives et Travaux Futurs (TODO Ouverts)}
+\begin{itemize}
+    \item \textbf{Table de Transposition et Zobrist Hashing} : Le schéma d'encodage par hachage Zobrist a été conçu mais n'a pas été finalisé dans l'exécution principale. Son intégration permettrait de stocker les scores d'évaluation des nœuds déjà parcourus et d'identifier instantanément les répétitions de positions (détection de boucles de jeu).
+    \item \textbf{Élagages Sélectifs Avancés} : Intégration de techniques d'élagage plus agressives comme le \textit{Null-Move Pruning} (pour éliminer rapidement les branches très favorables), le \textit{Late Move Reduction} (LMR) pour réduire la profondeur d'exploration des coups moins prometteurs, et la recherche de quiescence (\textit{Quiescence Search}) aux feuilles.
+    \item \textbf{Aspiration Windows} : Utilisation de fenêtres de recherche resserrées au lieu d'une fenêtre de recherche infinie lors de l'approfondissement itératif, pour maximiser l'élagage lorsque l'évaluation est stable.
+    \item \textbf{BFS Distance} : Remplacement de la distance de Manhattan par une distance calculée par un parcours en largeur (BFS) prenant en compte la topologie exacte des bandes et les obstacles sur le plateau.
+    \item \textbf{Inférence ONNX Quantifiée} : Intégration finale de l'exécuteur ONNX Runtime pour charger le modèle BandDPER quantifié en INT8 et l'évaluer en temps réel sous une latence ciblée de 1 à 2 $\mu$s par coup.
+\end{itemize}
 
 \section{Conclusion et Difficultés Rencontrées}
 La mise au point de cette IA pour le jeu d'Escampe a été un défi algorithmique enrichissant. Les principales difficultés ont résidé dans :
@@ -246,6 +461,23 @@ Chess Programming Wiki,
 Chess Programming Wiki,
 \textit{Match Statistics (SPRT)},
 \url{https://www.chessprogramming.org/Match_Statistics}
+
+\bibitem{cp_nnue}
+Yu Nasu, \textit{Efficiently Updatable Neural-Network-based Evaluation Functions for Computer Shogi},
+The 28th World Computer Shogi Championship Appeal Document, 2018.
+\url{https://official-stockfish.github.io/docs/nnue-pytorch-wiki/docs/nnue.html}
+
+\bibitem{bromley1993}
+J. Bromley et al.,
+\textit{Signature Verification using a Siamese Time Delay Neural Network},
+NeurIPS, 1993.
+\url{https://papers.nips.cc/paper/1993/hash/0d4262ad58b4d3866d5aa0f4f9e1c06b-Abstract.html}
+
+\bibitem{alphazero}
+D. Silver et al.,
+\textit{Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm},
+arXiv:1712.01815, 2017.
+\url{https://arxiv.org/abs/1712.01815}
 
 \end{thebibliography}
 

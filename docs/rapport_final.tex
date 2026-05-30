@@ -97,12 +97,20 @@ Au-delà de la complexité combinatoire, les principales difficultés algorithmi
 Afin de garantir des performances optimales lors de l'exploration de l'arbre de jeu, les structures de données sous-jacentes doivent permettre une génération de coups et une évaluation d'états extrêmement rapides.
 
 \subsection{Structure Générale du Projet}
-Le code source est structuré en plusieurs packages modulaires favorisant la séparation des responsabilités :
+Le code source est structuré en plusieurs packages modulaires favorisant la séparation des responsabilités et le découplage des composants :
 \begin{itemize}
-    \item \textbf{Package \texttt{game}} : Contient les abstractions fondamentales du jeu d'Escampe. \texttt{EscampeBoard} modélise le plateau et les règles de transition d'états ; \texttt{EscampeMove} gère l'encodage des déplacements ; et \texttt{EscampeAIPlayer} implémente l'interface \texttt{IJoueur} pour orchestrer l'évaluation du meilleur coup et le temps restant.
-    \item \textbf{Package \texttt{algorithms}} : Regroupe l'intelligence décisionnelle. Il est divisé en sous-packages : \texttt{algorithms.search} implémente les algorithmes d'exploration (\texttt{NegamaxKH}, \texttt{AlphaBetaKH}) régis par la classe d'ordonnancement \texttt{MoveOrderer} (Killer Moves + History Heuristic) ; \texttt{algorithms.evaluation} encapsule l'heuristique linéaire (\texttt{Heuristic}, \texttt{HeuristicConfig}) ; \texttt{Opening} gère la bibliothèque de départ ; et \texttt{TimeManager} s'occupe du budget temporel.
-    \item \textbf{Package \texttt{ranking}} : Dédié à la validation et à l'optimisation. Il contient \texttt{TournamentRunner} (simulations de tournois locaux), \texttt{AIRankingSystem} (calcul du classement Elo/SPRT), et \texttt{SimplexTuner}/\texttt{ParameterTuner} (calibrations SPSA).
-    \item \textbf{Package \texttt{io}} : Fournit les points d'entrée d'exécution. \texttt{ClientJeu} assure la communication réseau TCP avec l'arbitre externe ; \texttt{Solo} permet de lancer une partie locale directe pour le débogage ; et \texttt{Applet} gère le rendu graphique.
+    \item \textbf{Package \texttt{interfaces}} : Définit les contrats essentiels pour l'ensemble du projet : \texttt{IJoueur} (contrat requis par l'arbitre), \texttt{IBoard} (abstraction du plateau), \texttt{IMove} (représentation générique d'un coup), \texttt{IRole} (rôle du joueur), et \texttt{IHeuristic} (contrat pour les fonctions d'évaluation heuristique). Ce package garantit un couplage faible et facilite la modularité.
+    \item \textbf{Package \texttt{game}} : Contient les implémentations physiques et conceptuelles du jeu. \texttt{EscampeBoard} modélise l'état et les transitions du plateau par le biais de Bitboards ; \texttt{EscampeMove} représente un déplacement (coordonnées de départ, intermédiaires, d'arrivée et contrainte de bande) ; et \texttt{EscampeAIPlayer} implémente le joueur autonome, gérant l'approfondissement itératif et la délégation de la recherche.
+    \item \textbf{Package \texttt{algorithms}} : Regroupe la logique de décision. Il se subdivise en :
+        \begin{itemize}
+            \item \texttt{algorithms.search} : Implémente les algorithmes de recherche (\texttt{NegamaxKH}, \texttt{AlphaBetaKH}) ainsi que la classe d'ordonnancement \texttt{MoveOrderer} (Killer Moves + History Heuristic).
+            \item \texttt{algorithms.evaluation} : Contient la fonction d'évaluation linéaire (\texttt{Heuristic}, \texttt{HeuristicConfig}).
+            \item \texttt{Opening} : Gère la bibliothèque de départ (ouvertures pré-calculées).
+            \item \texttt{TimeManager} : Calcule dynamiquement le budget temporel restant.
+        \end{itemize}
+    \item \textbf{Package \texttt{model}} : Contient la classe \texttt{DataExport} chargée de sérialiser et d'exporter les états de jeu joués au format JSON. Ces données d'apprentissage alimentent le pipeline d'entraînement Python du modèle de réseau de neurones BandDPER.
+    \item \textbf{Package \texttt{ranking}} : Dédié à la validation et aux tournois comparatifs. Il contient \texttt{TournamentRunner} (simulation locale en parallèle), \texttt{AIRankingSystem} (suivi des classements Elo et tests statistiques SPRT), et \texttt{SimplexTuner} (implémentation de l'optimisation SPSA pour l'heuristique).
+    \item \textbf{Package \texttt{io}} : Gère les interfaces d'exécution. \texttt{ClientJeu} assure la communication réseau TCP avec le serveur de l'arbitre ; \texttt{Solo} permet de lancer une partie locale directe entre deux bots pour le débogage ; et \texttt{Applet} fournit le rendu graphique visuel.
 \end{itemize}
 
 \subsection{Représentation du Plateau (Bitboards)}
@@ -227,11 +235,32 @@ Le canal 15 place les paladins adverses dans un référentiel centré sur notre 
 
 L'encodeur projette chaque tenseur en un vecteur de dimension 128 via : Conv2d$(16\to32, 3{\times}3)$ $\to$ BN $\to$ ReLU $\to$ Conv2d$(32\to64, 3{\times}3,\, \text{dil.}=2)$ $\to$ BN $\to$ ReLU $\to$ Linear$(2304\to128)$ $\to$ BN $\to$ ClippedReLU$[0,1]$. La dilatation 2 élargit le champ réceptif à $5{\times}5$, capturant les motifs de mouvement à moyenne portée.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{model/components/SSE.png}
+    \caption{Structure de l'encodeur spatial partagé (Shared Spatial Encoder) utilisé pour chaque perspective (poids partagés).}
+    \label{fig:shared-spatial-encoder}
+\end{figure}
+
 \paragraph{Fusion et tronc résiduel.}
 Les deux embeddings (256 dimensions) sont concaténés avec deux scalaires normalisés — le nombre de coups légaux de chaque licorne (échappatoire) — formant un vecteur de 258 dimensions. Ce vecteur traverse 3 \texttt{ResBlocks} de même dimension (Linear $\to$ Dropout(0.2) $\to$ BN $\to$ ReLU $\to$ Linear $\to$ BN, puis connexion résiduelle + ClippedReLU). Les 3 niveaux correspondent aux trois abstractions naturelles du jeu : proximité/licorne-relative, interaction de bandes/tempo, forçage/échappatoire.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{model/components/residual_trunk.png}
+    \caption{Structure du tronc résiduel avec blocs de correction résiduels (skip connections).}
+    \label{fig:residual-trunk}
+\end{figure}
+
 \paragraph{Tête de sortie et raccourci.}
 Linear$(258\to64)$ $\to$ ReLU $\to$ Linear$(64\to1)$ $\to$ $\tanh$, produisant un scalaire dans $[-1,+1]$. Un paramètre appris unique (\texttt{w\_forced\_pass}) s'additionne directement à la sortie brute sans traverser le tronc, inspiré du raccourci PSQT de Stockfish HalfKAv2~\cite{cp_nnue}. Ce bypass garantit un gradient fort pour les positions de passe forcé ($\sim$2--5\% du corpus), sans surcharger le tronc.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{model/components/output_head.png}
+    \caption{Structure de la tête de sortie avec injection directe du signal de passe forcé (raccourci direct).}
+    \label{fig:output-head}
+\end{figure}
 
 \paragraph{Bilan paramétrique.}
 
@@ -332,6 +361,38 @@ Pour valider statistiquement qu'une modification apporte un gain Elo réel avant
 
 \subsection{Validation de la Conduite Autonome}
 Les protocoles de communication avec l'arbitre ont été validés localement en s'assurant qu'aucun dépassement de délai n'intervenait et que tous les coups générés restaient strictement conformes aux règles topologiques du jeu.
+
+\section{Bilan des Fonctionnalités et Statut du TODO}
+\label{sec:todo_status}
+
+Afin de mesurer le travail accompli au cours du projet et de structurer les développements futurs, un suivi rigoureux a été maintenu sous la forme d'un tableau d'objectifs (TODO). Cette section dresse le bilan des fonctionnalités implémentées, validées et de celles envisagées comme perspectives d'amélioration.
+
+\subsection{Fonctionnalités Entièrement Implémentées et Validées}
+\begin{itemize}
+    \item \textbf{Moteur de Recherche et Pruning} : Implémentation complète de l'algorithme \texttt{Negamax} avec élagage Alpha-Bêta symétrique. L'approfondissement itératif (\textit{Iterative Deepening}) a été déployé avec succès, garantissant une flexibilité absolue face aux limites de temps de réflexion.
+    \item \textbf{Gestion Fine du Temps} : Mise en œuvre du \texttt{TimeManager} avec un double niveau de sécurité (\textit{Soft Bound} pour clore proprement la recherche à la fin d'une profondeur donnée, et \textit{Hard Bound} coupant instantanément l'exécution récursive du minimax en cas d'urgence). Le temps est mesuré à haute résolution via \texttt{System.nanoTime()}.
+    \item \textbf{Ordonnancement des Coups} : Intégration d'un ordonnanceur de coups (\texttt{MoveOrderer}) combinant l'heuristique des coups tueurs (\textit{Killer Heuristic} avec FIFO à 2 slots) et l'heuristique de l'historique (\textit{History Heuristic} pondérée par la profondeur au carré). Le tri est réalisé \textit{in-place} pour minimiser l'impact mémoire.
+    \item \textbf{Heuristiques Linéaires Calibrées} : Conception d'une formule d'évaluation combinant la proximité d'attaque, la proximité de défense, la mobilité/escapabilité de la licorne, le contrôle de bande et la pression de tempo. Ces poids ont été calibrés par optimisation stochastique SPSA. L'analyse d'ablation a conduit à exclure le terme de contrôle des bandes pour de meilleures performances (variant \texttt{BandCoverage-ablated}).
+    \item \textbf{Bibliothèque d'Ouvertures et Réflexion en Temps Masqué} : Intégration d'un livre d'ouvertures diversifié (Balanced, Central Pressure, Symmetric, Flanking, etc.) assurant une bonne couverture de départ. Déploiement du mécanisme de \textit{Pondering} via un thread d'arrière-plan analysant le coup adverse supposé pendant son temps de réflexion (avec gestion des cas de \textit{ponder hit} et \textit{ponder miss}).
+    \item \textbf{Optimisations Système et Représentation} : Passage d'une représentation matricielle classique à des Bitboards (\texttt{long} de 64 bits en Java), élimination des vérifications \texttt{instanceof} et implémentation du mécanisme \textit{Make-Unmake} pour éviter le clonage d'objets et stabiliser le Garbage Collector.
+    \item \textbf{Conception du Modèle de Deep Learning} : Modélisation, génération de données (Minimax bootstrapping à profondeur 5, 50K-100K positions), entraînement sous PyTorch du modèle BandDPER, et intégration des mécanismes d'export (repliement analytique de BatchNorm).
+\end{itemize}
+
+\subsection{Fonctionnalités Conçues, Rejetées ou Non Retenues}
+\begin{itemize}
+    \item \textbf{Contrôle de Bande dans l'Heuristique} : Bien que central dans les règles du jeu, le contrôle manuel des bandes a été rejeté après tests SPRT et ablation, car il nuisait statistiquement au classement Elo global de l'agent.
+    \item \textbf{Utilisation Directe du Réseau de Neurones en Jeu} : Le réseau BandDPER n'a pas été retenu comme fonction d'évaluation principale dans l'arbre en raison de sa latence d'évaluation trop élevée par rapport à l'heuristique linéaire optimisée en Java. Il est en revanche préconisé pour l'ordonnancement à la racine.
+    \item \textbf{Noyaux Asymétriques $1\times6$/$6\times1$ dans l'Encoder} : Rejetés au profit de noyaux $3\times3$ standard à la suite d'une meilleure modélisation des mouvements brisés d'Escampe (qui touchent aussi les diagonales).
+\end{itemize}
+
+\subsection{Perspectives et Travaux Futurs (TODO Ouverts)}
+\begin{itemize}
+    \item \textbf{Table de Transposition et Zobrist Hashing} : Le schéma d'encodage par hachage Zobrist a été conçu mais n'a pas été finalisé dans l'exécution principale. Son intégration permettrait de stocker les scores d'évaluation des nœuds déjà parcourus et d'identifier instantanément les répétitions de positions (détection de boucles de jeu).
+    \item \textbf{Élagages Sélectifs Avancés} : Intégration de techniques d'élagage plus agressives comme le \textit{Null-Move Pruning} (pour éliminer rapidement les branches très favorables), le \textit{Late Move Reduction} (LMR) pour réduire la profondeur d'exploration des coups moins prometteurs, et la recherche de quiescence (\textit{Quiescence Search}) aux feuilles.
+    \item \textbf{Aspiration Windows} : Utilisation de fenêtres de recherche resserrées au lieu d'une fenêtre de recherche infinie lors de l'approfondissement itératif, pour maximiser l'élagage lorsque l'évaluation est stable.
+    \item \textbf{BFS Distance} : Remplacement de la distance de Manhattan par une distance calculée par un parcours en largeur (BFS) prenant en compte la topologie exacte des bandes et les obstacles sur le plateau.
+    \item \textbf{Inférence ONNX Quantifiée} : Intégration finale de l'exécuteur ONNX Runtime pour charger le modèle BandDPER quantifié en INT8 et l'évaluer en temps réel sous une latence ciblée de 1 à 2 $\mu$s par coup.
+\end{itemize}
 
 \section{Conclusion et Difficultés Rencontrées}
 La mise au point de cette IA pour le jeu d'Escampe a été un défi algorithmique enrichissant. Les principales difficultés ont résidé dans :
