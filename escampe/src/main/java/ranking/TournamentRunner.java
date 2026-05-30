@@ -41,37 +41,41 @@ public class TournamentRunner {
         HeuristicConfig hSimplexFull    = HeuristicConfig.createSimplexFull();
 
         // ── Depth 2 Baselines for Elo calibration ──────────────────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hSimplexFull));
 
         // ── Depth 3 Baselines (without KH) ──────────────────────────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hBandCoverage));
 
         // ── Depth 3 with Killer Moves + History Heuristic (KH) ──────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hSimplexFull));
 
         // ── Depth 4 with Killer Moves + History Heuristic (KH) ──────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hSimplexFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   4, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   4, hBandCoverage));
 
         // ── Depth 5 with Killer Moves + History Heuristic (KH) ──────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hSimplexFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   5, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   5, hBandCoverage));
 
         // ── Depth 6 with Killer Moves + History Heuristic (KH) ──────────────
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hSimplexFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hDefault));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hSimplexFull));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hBandCoverage));
+        // ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hSimplexFull));
+
+        // ── Ponder vs No Ponder test at Depth 4 ─────────────────────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH, 5, hBandCoverage, true, true));  // Pondering
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH, 5, hBandCoverage, true, false)); // No Pondering
 
         int n = ranking.getAlgorithms().size();
         int pairings = n * (n - 1) / 2;

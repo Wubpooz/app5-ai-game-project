@@ -6,6 +6,7 @@ import algorithms.search.AlphaBetaKH;
 import algorithms.search.MiniMax;
 import algorithms.search.Negamax;
 import algorithms.search.NegamaxKH;
+import algorithms.search.PonderingGameAlgorithm;
 import algorithms.evaluation.Heuristic;
 import algorithms.evaluation.HeuristicConfig;
 import game.EscampeBoard;
@@ -36,12 +37,14 @@ public class AlgorithmConfig {
     private final int depth;
     private final HeuristicConfig heuristicConfig;
     private final boolean iterativeDeepening;
+    private final boolean ponder;
     
     public AlgorithmConfig(AlgorithmType type, int depth, HeuristicConfig heuristicConfig) {
         this.type = type;
         this.depth = depth;
         this.heuristicConfig = heuristicConfig;
         this.iterativeDeepening = false;
+        this.ponder = false;
     }
 
     public AlgorithmConfig(AlgorithmType type, int depth, HeuristicConfig heuristicConfig, boolean iterativeDeepening) {
@@ -49,27 +52,44 @@ public class AlgorithmConfig {
         this.depth = depth;
         this.heuristicConfig = heuristicConfig;
         this.iterativeDeepening = iterativeDeepening;
+        this.ponder = false;
+    }
+
+    public AlgorithmConfig(AlgorithmType type, int depth, HeuristicConfig heuristicConfig, boolean iterativeDeepening, boolean ponder) {
+        this.type = type;
+        this.depth = depth;
+        this.heuristicConfig = heuristicConfig;
+        this.iterativeDeepening = iterativeDeepening;
+        this.ponder = ponder;
     }
     
     public GameAlgorithm<EscampeMove, PlayerColor, EscampeBoard> createInstance(
             PlayerColor playerRole, PlayerColor opponentRole) {
         Heuristic heuristic = new Heuristic(heuristicConfig);
+        GameAlgorithm<EscampeMove, PlayerColor, EscampeBoard> baseInstance;
         switch (type) {
             case ALPHABETA:
-                return new AlphaBeta<>(playerRole, opponentRole, heuristic, depth);
+                baseInstance = new AlphaBeta<>(playerRole, opponentRole, heuristic, depth);
+                break;
             case MINIMAX:
-                return new MiniMax<>(playerRole, opponentRole, heuristic, depth);
+                baseInstance = new MiniMax<>(playerRole, opponentRole, heuristic, depth);
+                break;
             case NEGAMAX:
-                // iterativeDeepening=false for fair fixed-depth tournament comparison vs AlphaBeta
-                return new Negamax<>(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
+                baseInstance = new Negamax<>(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
+                break;
             case ALPHABETA_KH:
-                return new AlphaBetaKH(playerRole, opponentRole, heuristic, depth);
+                baseInstance = new AlphaBetaKH(playerRole, opponentRole, heuristic, depth);
+                break;
             case NEGAMAX_KH:
-                // iterativeDeepening=false for fair fixed-depth tournament comparison
-                return new NegamaxKH(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
+                baseInstance = new NegamaxKH(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
+                break;
             default:
                 throw new IllegalArgumentException("Unknown algorithm type: " + type);
         }
+        if (ponder) {
+            return new PonderingGameAlgorithm(baseInstance, playerRole, opponentRole);
+        }
+        return baseInstance;
     }
     
     public AlgorithmType getType() {
@@ -83,10 +103,14 @@ public class AlgorithmConfig {
     public HeuristicConfig getHeuristicConfig() {
         return heuristicConfig;
     }
+
+    public boolean isPonder() {
+        return ponder;
+    }
     
     @Override
     public String toString() {
-        return type.getDisplayName() + " (d=" + depth + ", h=" + heuristicConfig.name + ")";
+        return type.getDisplayName() + (ponder ? "+Ponder" : "") + " (d=" + depth + ", h=" + heuristicConfig.name + ")";
     }
     
     @Override
@@ -94,7 +118,7 @@ public class AlgorithmConfig {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AlgorithmConfig that = (AlgorithmConfig) o;
-        return depth == that.depth && type == that.type && heuristicConfig.name.equals(that.heuristicConfig.name);
+        return depth == that.depth && type == that.type && heuristicConfig.name.equals(that.heuristicConfig.name) && ponder == that.ponder;
     }
     
     @Override
@@ -102,6 +126,7 @@ public class AlgorithmConfig {
         int result = type.hashCode();
         result = 31 * result + depth;
         result = 31 * result + heuristicConfig.name.hashCode();
+        result = 31 * result + (ponder ? 1 : 0);
         return result;
     }
 }
