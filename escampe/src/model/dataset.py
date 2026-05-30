@@ -243,7 +243,7 @@ class EscampeDataset(Dataset):
             opp_persp = 'black' if white_to_move else 'white'
 
             x_me,  esc_me,  esc_opp_me,  fp_me  = build_tensor(entry, me_persp)
-            x_opp, _,       _,           _      = build_tensor(entry, opp_persp)
+            x_opp, esc_opp, esc_me_opp, fp_opp      = build_tensor(entry, opp_persp)
 
             self.data.append((
                 torch.tensor(x_me, dtype=torch.float32),
@@ -252,6 +252,16 @@ class EscampeDataset(Dataset):
                 torch.tensor(esc_opp_me, dtype=torch.float32),
                 torch.tensor(fp_me, dtype=torch.float32),
                 torch.tensor(score, dtype=torch.float32),
+            ))
+            
+            # Data augmentation
+            self.data.append((
+                torch.tensor(x_opp,  dtype=torch.float32),
+                torch.tensor(x_me,   dtype=torch.float32),
+                torch.tensor(esc_opp, dtype=torch.float32),
+                torch.tensor(esc_me_opp,  dtype=torch.float32),
+                torch.tensor(fp_opp,     dtype=torch.float32),
+                torch.tensor(-score, dtype=torch.float32),   # flipped score
             ))
 
     def __len__(self):
