@@ -7,6 +7,7 @@ import interfaces.IMove;
 import interfaces.IRole;
 import java.util.logging.Logger;
 import algorithms.TimeManager;
+import algorithms.evaluation.Heuristic;
 
 /**
  * Negamax : max(a, b) == -min(-a, -b)
@@ -152,7 +153,11 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 			if (iterBest != null) {
 				lastCompletedBest = iterBest;
 				bestMove = iterBest;
-				System.out.println("Depth=" + currentDepth + ", bestMove=" + bestMove + ", lastCompletedBest=" + lastCompletedBest);
+				System.out.println("Depth=" + currentDepth + ", bestMove=" + bestMove + ", lastCompletedBest=" + lastCompletedBest + ", bestValue=" + bestValue);
+			}
+			if (bestValue == Heuristic.WIN_SCORE) {
+				// Found a winning move, no need to search deeper
+				break;
 			}
 		}
 

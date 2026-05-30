@@ -38,7 +38,7 @@ public class Heuristic implements IHeuristic<EscampeBoard, PlayerColor> {
   private static final int WE_PASS_PENALTY = 500; // penality when we have to pass
   private static final int PASS_PRESSURE_REWARD = 100; // reward when opponent has to pass
 
-  private static final int WIN_SCORE = 100000; // Imediately winning positions
+  public static final int WIN_SCORE = 100000; // Imediately winning positions
   private static final int LOSS_SCORE = -100000; // Imediately losing positions
 
 
