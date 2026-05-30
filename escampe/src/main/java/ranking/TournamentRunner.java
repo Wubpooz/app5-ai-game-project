@@ -36,48 +36,42 @@ public class TournamentRunner {
     private static void configureAlgorithms(AIRankingSystem ranking) {
         LOGGER.info("Configuring algorithms and heuristic variants...\n");
         
-        HeuristicConfig hDefault = HeuristicConfig.createDefault();
-        HeuristicConfig hNoDistance = HeuristicConfig.createAblated("distance");
-        HeuristicConfig hBandCoverage = HeuristicConfig.createAblated("bandcoverage");
-        HeuristicConfig hSpsaFull = HeuristicConfig.createSpsaFull();
-        HeuristicConfig hSpsaNoBand = HeuristicConfig.createSpsaNoBand();
-        HeuristicConfig hBayesFull = HeuristicConfig.createBayesFull();
-        HeuristicConfig hBayesNoBand = HeuristicConfig.createBayesNoBand();
-        HeuristicConfig hSimplexFull = HeuristicConfig.createSimplexFull();
-        HeuristicConfig hSimplexNoBand = HeuristicConfig.createSimplexNoBand();
-        
-        // 1. Search Depth and Algorithm configurations
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.MINIMAX, 1, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 1, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 3, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 1, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hDefault, true)); // Negamax with iterative deepening at depth 2
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 3, hDefault));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 3, hDefault, true)); // Negamax with iterative deepening at depth 3
-        
-        // 2. Heuristic Ablation (using AlphaBeta at depth 2)
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hNoDistance));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hBandCoverage));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hNoDistance));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBandCoverage));
-        
-        // 3. Tuned Heuristics (using AlphaBeta at depth 2)
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSpsaFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSpsaNoBand));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hBayesFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hBayesNoBand));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSimplexFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA, 2, hSimplexNoBand));
+        HeuristicConfig hDefault        = HeuristicConfig.createDefault();
+        HeuristicConfig hBandCoverage   = HeuristicConfig.createAblated("bandcoverage");
+        HeuristicConfig hSimplexFull    = HeuristicConfig.createSimplexFull();
 
-        // 4. Tuned Heuristics (using Negamax at depth 2)
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSpsaFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSpsaNoBand));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBayesFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hBayesNoBand));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSimplexFull));
-        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX, 2, hSimplexNoBand));
+        // ── Depth 2 Baselines for Elo calibration ──────────────────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    2, hSimplexFull));
+
+        // ── Depth 3 Baselines (without KH) ──────────────────────────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA,    3, hBandCoverage));
+
+        // ── Depth 3 with Killer Moves + History Heuristic (KH) ──────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 3, hSimplexFull));
+
+        // ── Depth 4 with Killer Moves + History Heuristic (KH) ──────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 4, hSimplexFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   4, hBandCoverage));
+
+        // ── Depth 5 with Killer Moves + History Heuristic (KH) ──────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 5, hSimplexFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   5, hBandCoverage));
+
+        // ── Depth 6 with Killer Moves + History Heuristic (KH) ──────────────
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hDefault));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.ALPHABETA_KH, 6, hSimplexFull));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hBandCoverage));
+        ranking.addAlgorithm(new AlgorithmConfig(AlgorithmConfig.AlgorithmType.NEGAMAX_KH,   6, hSimplexFull));
 
         int n = ranking.getAlgorithms().size();
         int pairings = n * (n - 1) / 2;
@@ -475,24 +469,33 @@ public class TournamentRunner {
         sb.append("          </thead>\n");
         sb.append("          <tbody class=\"font-body-md text-on-surface-variant divide-y divide-surface-dim\">\n");
         
-        double baseElo = ranking.getEloRating("AlphaBeta (d=2, h=Default)");
-        double noDistElo = ranking.getEloRating("AlphaBeta (d=2, h=No-distance)");
-        double withBandElo = ranking.getEloRating("AlphaBeta (d=2, h=With-bandcoverage)");
-        double spsaFullElo = ranking.getEloRating("AlphaBeta (d=2, h=SPSA-Tuned-Full)");
-        double spsaNoBandElo = ranking.getEloRating("AlphaBeta (d=2, h=SPSA-Tuned-NoBand)");
-        double bayesFullElo = ranking.getEloRating("AlphaBeta (d=2, h=Bayes-Tuned-Full)");
-        double bayesNoBandElo = ranking.getEloRating("AlphaBeta (d=2, h=Bayes-Tuned-NoBand)");
-        double simplexFullElo = ranking.getEloRating("AlphaBeta (d=2, h=Simplex-Tuned-Full)");
-        double simplexNoBandElo = ranking.getEloRating("AlphaBeta (d=2, h=Simplex-Tuned-NoBand)");
+        double baseElo3 = ranking.getEloRating("AlphaBeta+KH (d=3, h=Default)");
+        double withBandElo3 = ranking.getEloRating("AlphaBeta+KH (d=3, h=With-bandcoverage)");
+        double simplexFullElo3 = ranking.getEloRating("AlphaBeta+KH (d=3, h=Simplex-Tuned-Full)");
+
+        double baseElo4 = ranking.getEloRating("AlphaBeta+KH (d=4, h=Default)");
+        double withBandElo4 = ranking.getEloRating("AlphaBeta+KH (d=4, h=With-bandcoverage)");
+        double simplexFullElo4 = ranking.getEloRating("AlphaBeta+KH (d=4, h=Simplex-Tuned-Full)");
+
+        double baseElo5 = ranking.getEloRating("AlphaBeta+KH (d=5, h=Default)");
+        double withBandElo5 = ranking.getEloRating("AlphaBeta+KH (d=5, h=With-bandcoverage)");
+        double simplexFullElo5 = ranking.getEloRating("AlphaBeta+KH (d=5, h=Simplex-Tuned-Full)");
+
+        double baseElo6 = ranking.getEloRating("AlphaBeta+KH (d=6, h=Default)");
+        double withBandElo6 = ranking.getEloRating("AlphaBeta+KH (d=6, h=With-bandcoverage)");
+        double simplexFullElo6 = ranking.getEloRating("AlphaBeta+KH (d=6, h=Simplex-Tuned-Full)");
         
-        appendAblationRow(sb, "Distance (Paladin to Unicorn)", noDistElo, baseElo - noDistElo);
-        appendAblationRow(sb, "Band Coverage (Variant)", withBandElo, baseElo - withBandElo);
-        appendAblationRow(sb, "SPSA-Tuned-Full (All Parameters)", spsaFullElo, baseElo - spsaFullElo);
-        appendAblationRow(sb, "SPSA-Tuned-NoBand", spsaNoBandElo, baseElo - spsaNoBandElo);
-        appendAblationRow(sb, "Bayesian-Tuned-Full", bayesFullElo, baseElo - bayesFullElo);
-        appendAblationRow(sb, "Bayesian-Tuned-NoBand", bayesNoBandElo, baseElo - bayesNoBandElo);
-        appendAblationRow(sb, "Simplex-Tuned-Full", simplexFullElo, baseElo - simplexFullElo);
-        appendAblationRow(sb, "Simplex-Tuned-NoBand", simplexNoBandElo, baseElo - simplexNoBandElo);
+        appendAblationRow(sb, "Band Coverage [Depth 3]", withBandElo3, baseElo3 - withBandElo3);
+        appendAblationRow(sb, "Simplex-Tuned-Full [Depth 3]", simplexFullElo3, baseElo3 - simplexFullElo3);
+        
+        appendAblationRow(sb, "Band Coverage [Depth 4]", withBandElo4, baseElo4 - withBandElo4);
+        appendAblationRow(sb, "Simplex-Tuned-Full [Depth 4]", simplexFullElo4, baseElo4 - simplexFullElo4);
+        
+        appendAblationRow(sb, "Band Coverage [Depth 5]", withBandElo5, baseElo5 - withBandElo5);
+        appendAblationRow(sb, "Simplex-Tuned-Full [Depth 5]", simplexFullElo5, baseElo5 - simplexFullElo5);
+        
+        appendAblationRow(sb, "Band Coverage [Depth 6]", withBandElo6, baseElo6 - withBandElo6);
+        appendAblationRow(sb, "Simplex-Tuned-Full [Depth 6]", simplexFullElo6, baseElo6 - simplexFullElo6);
         
         sb.append("          </tbody>\n");
         sb.append("        </table>\n");

@@ -2,8 +2,10 @@ package ranking;
 
 import algorithms.GameAlgorithm;
 import algorithms.search.AlphaBeta;
+import algorithms.search.AlphaBetaKH;
 import algorithms.search.MiniMax;
 import algorithms.search.Negamax;
+import algorithms.search.NegamaxKH;
 import algorithms.evaluation.Heuristic;
 import algorithms.evaluation.HeuristicConfig;
 import game.EscampeBoard;
@@ -15,7 +17,9 @@ public class AlgorithmConfig {
     public enum AlgorithmType {
         ALPHABETA("AlphaBeta"),
         MINIMAX("MiniMax"),
-        NEGAMAX("Negamax");
+        NEGAMAX("Negamax"),
+        ALPHABETA_KH("AlphaBeta+KH"),
+        NEGAMAX_KH("Negamax+KH");
         
         private final String displayName;
         
@@ -58,6 +62,11 @@ public class AlgorithmConfig {
             case NEGAMAX:
                 // iterativeDeepening=false for fair fixed-depth tournament comparison vs AlphaBeta
                 return new Negamax<>(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
+            case ALPHABETA_KH:
+                return new AlphaBetaKH(playerRole, opponentRole, heuristic, depth);
+            case NEGAMAX_KH:
+                // iterativeDeepening=false for fair fixed-depth tournament comparison
+                return new NegamaxKH(playerRole, opponentRole, heuristic, depth, iterativeDeepening);
             default:
                 throw new IllegalArgumentException("Unknown algorithm type: " + type);
         }

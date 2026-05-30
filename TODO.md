@@ -93,11 +93,11 @@
 
 - [ ] Repetition detection using the transposition table: if we encounter the same board position again, we can detect a draw by repetition.
 
-- [ ] [Move ordering](https://www.chessprogramming.org/Move_Ordering)
+- [x] [Move ordering](https://www.chessprogramming.org/Move_Ordering)
   - [ ] TT move first
   - [ ] Captures and immediate tactial mpves sorted by MVV/LVA (most valuable victim/least valuable attacker)
   - [ ] History heuristic: moves that have caused beta cutoffs in the past are tried earlier.
-  - [ ] Killer moves: moves that caused cutoffs at the same depth in other branches are tried earlier.
+  - [x] Killer moves: moves that caused cutoffs at the same depth in other branches are tried earlier.
   - [ ] Remaining moves
 
 - [ ] [Selective pruning](https://www.chessprogramming.org/Selectivity)
@@ -107,7 +107,7 @@
 
 - [ ] [Quiescence search](https://www.chessprogramming.org/Quiescence_Search): extend search in "noisy" positions (captures, checks) to avoid horizon effect.
 
-- [ ] [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic): keep track of the best moves that caused beta cutoffs at each depth and try them first in future searches at the same depth.
+- [x] [Killer heuristic](https://www.chessprogramming.org/Killer_Heuristic): keep track of the best moves that caused beta cutoffs at each depth and try them first in future searches at the same depth.
 
 ## Heuristics
 - [x] Evaluation function: $\displaystyle{-w_1\min_{p\in P}{(d^{\text{atk}}_{p})} - w_2\,\text{avg}_{p\in P}(d^{\text{atk}}_{p}) + w_3\min_{e\in E}{(d^{\text{def}}_{e})} + w_4\,\text{avg}_{e\in E}(d^{\text{def}}_{e}) + w_5\,\mathcal{E_{\text{us}}} - w_6\,\mathcal{E_{\text{opp}}} + w_7 \mathcal{BC} + w_8 \mathcal{T}}$
