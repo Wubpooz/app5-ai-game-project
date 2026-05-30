@@ -1,0 +1,252 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+
+% ── Code style ────────────────────────────────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  stringstyle=\color{red},
+  commentstyle=\color{green!60!black}\itshape,
+  backgroundcolor=\color{gray!5},
+  frame=single,
+  rulecolor=\color{gray!40},
+  breaklines=true,
+  tabsize=4,
+  captionpos=b,
+  showstringspaces=false
+}
+
+% ── Header / Footer ────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Projet IA - Jeu d'Escampe}
+\lhead{Rapport Final}
+\cfoot{\thepage}
+
+% ── Title ──────────────────────────────────────────────────────────────────────
+\title{
+  \Large \textbf{Conception et Implémentation d'une Intelligence Artificielle pour le Jeu d'Escampe}\\[0.4em]
+  \large Rapport Final de Projet
+}
+\author{
+  Mathieu \textsc{Waharte} \and [Nom du Binôme si applicable]
+}
+\date{Mai 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+Ce rapport détaille la conception et la mise en œuvre d'un agent autonome capable de jouer au jeu d'Escampe dans un environnement avec contraintes de temps réel. Nous y présentons nos choix d'implantation, notamment les structures de données optimisées (Bitboards), les algorithmes de recherche (Negamax avec élagage Alpha-Bêta, Iterative Deepening) ainsi que la fonction d'évaluation heuristique développée pour modéliser la complexité topologique du plateau. Nous abordons également les stratégies de placement initial, la gestion dynamique du temps d'exécution, et fournissons une analyse des performances validées par des tests rigoureux.
+\end{abstract}
+
+\vspace{0.5em}
+\noindent\rule{\linewidth}{0.4pt}
+\tableofcontents
+\vspace{1em}
+
+\newpage
+\section{Introduction}
+Dans le cadre de ce projet, l'objectif principal est de développer une Intelligence Artificielle capable de conduire de façon autonome une partie d'Escampe en temps limité (300s à 900s par joueur). L'agent doit communiquer avec un arbitre validant les coups et garantissant le respect des contraintes temporelles.
+Le jeu d'Escampe se caractérise par des règles de déplacement atypiques (dépendance à la bande ciblée par l'adversaire) et une asymétrie de la topologie du plateau. Ces spécificités requièrent des choix algorithmiques pointus, s'écartant parfois des implémentations classiques des jeux à information parfaite.
+
+\section{Choix d'Implantation et Structures de Données}
+Afin de garantir des performances optimales lors de l'exploration de l'arbre de jeu, les structures de données sous-jacentes doivent permettre une génération de coups et une évaluation d'états extrêmement rapides.
+
+\subsection{Représentation du Plateau (Bitboards)}
+Nous avons opté pour une représentation du plateau basée sur des \textit{Bitboards}~\cite{cp_bitboards}. Le plateau de 6x6 cases est encodé sur des entiers de 64 bits (\texttt{long} en Java).
+\begin{itemize}
+    \item Les opérations de manipulation de pièces (génération des coups, détection de collisions) se réduisent à des opérations bit à bit (ET, OU, décalages), exécutées en un seul cycle d'horloge.
+    \item Cette approche permet d'éliminer les itérations coûteuses sur des tableaux multidimensionnels et minimise la création d'objets, limitant ainsi la pression sur le \textit{Garbage Collector}.
+\end{itemize}
+
+\subsection{Optimisations d'Implémentation}
+Plusieurs choix techniques ont été faits pour maximiser le nombre de nœuds explorés par seconde :
+\begin{itemize}
+    \item Suppression des appels \texttt{instanceof} lors de la génération des coups via des méthodes dédiées par type de pièce.
+    \item Utilisation de \texttt{System.nanoTime()} pour une résolution temporelle accrue sans coût de changement de contexte de l'OS.
+    \item \textbf{[À COMPLÉTER]} Table de transposition via Zobrist Hashing~\cite{cp_zobrist} : utilisation d'une table de hachage plate (un tableau de \texttt{long}) pour éviter la réévaluation des positions déjà rencontrées, y compris la détection de répétition de position.
+\end{itemize}
+
+\section{Algorithmes de Recherche du Meilleur Coup}
+La recherche du meilleur coup repose sur la théorie de la recherche adversarielle pour les jeux à somme nulle.
+
+\subsection{Negamax et Élagage Alpha-Bêta}
+Nous avons implémenté l'algorithme Negamax (une variante élégante du Minimax) couplé à un élagage Alpha-Bêta~\cite{cp_alphabeta}. Cette approche unifie l'évaluation pour les deux joueurs, réduisant ainsi la complexité du code. L'élagage Alpha-Bêta permet de réduire drastiquement le facteur de branchement effectif de l'arbre de recherche en ignorant les branches dont il est prouvé qu'elles sont sous-optimales.
+
+\subsection{Approfondissement Itératif (Iterative Deepening)}
+Pour exploiter au mieux le temps imparti, la recherche est structurée autour d'un approfondissement itératif~\cite{cp_iterative_deepening}. L'algorithme explore l'arbre progressivement : à profondeur 1, puis 2, puis 3, et ainsi de suite jusqu'à la limite \texttt{depthMax}. 
+À chaque nouvelle itération de profondeur, le temps écoulé est vérifié via notre limite de calcul logicielle (\textit{Soft Bound}). Si cette limite est atteinte en cours d'itération, l'algorithme abandonne l'itération incomplète en cours et renvoie immédiatement le meilleur coup validé lors de la \textit{dernière itération complétée}. Ce mécanisme garantit qu'un coup fiable et profondément évalué est toujours disponible sans risque de dépassement.
+
+\textbf{[À COMPLÉTER]} \textit{Aspiration Windows} : utilisation de fenêtres de recherche réduites autour du score précédent pour maximiser les coupures d'élagage.
+
+\subsection{Ordonnancement des Coups et Élagage Sélectif (Move Ordering \& Pruning)}
+\textit{\% TODO: Détailler les techniques d'ordonnancement implémentées.}
+
+Un élagage Alpha-Bêta est maximal lorsque les meilleurs coups sont explorés en premier~\cite{cp_move_ordering}.
+\begin{itemize}
+    \item \textbf{[À COMPLÉTER]} \textit{Transposition Table Move} et \textit{Killer Heuristic}~\cite{cp_killer} : essai prioritaire du meilleur coup de la profondeur précédente et des coups ayant provoqué des coupures ailleurs dans l'arbre.
+    \item \textbf{[À COMPLÉTER]} \textit{Null-move Pruning}~\cite{cp_nullmove} et \textit{Late Move Reduction}~\cite{cp_lmr} : élagage ou réduction de profondeur pour les branches jugées non prometteuses (futility pruning).
+\end{itemize}
+
+\section{Fonction d'Évaluation (Heuristiques)}
+L'évaluation des feuilles de l'arbre de recherche se doit d'être précise tout en demeurant très rapide à calculer. Notre heuristique est une combinaison linéaire de plusieurs signaux topologiques.
+
+\subsection{Heuristiques Implémentées et Testées}
+La fonction d'évaluation s'articule autour des métriques suivantes :
+\begin{enumerate}
+    \item \textbf{Distances d'Attaque et de Défense} : Calcul de la distance de Manhattan entre les Paladins et les Licornes adverses. Plus les attaquants sont proches, meilleur est le score. L'heuristique pénalise la proximité des Paladins adverses à notre Licorne. \textit{Note: une implémentation avancée utilisant une distance en nombre de sauts (BFS ply) intégrant la contrainte des bandes a également été modélisée.}
+    \item \textbf{Échappatoire de la Licorne (Escapability)} : Compte direct du nombre de cases légales de fuite pour la Licorne de chaque joueur. Un adversaire avec peu d'échappatoires est considéré comme dominé positionnellement.
+    \item \textbf{Contrôle des Bandes (Band Control)} : La contrainte du jeu force l'adversaire à partir d'une bande spécifique. Le positionnement de nos Paladins sur des cases de bande 1 (où l'adversaire n'a aucun choix) est fortement valorisé.
+    \item \textbf{Pression Temporelle et Mobilité} : Récompense accordée pour un nombre de coups légaux plus élevé, et forte pénalité lorsqu'un joueur est forcé de passer son tour en raison du mécanisme de contrainte.
+\end{enumerate}
+
+\subsection{Intégration d'un Modèle d'Évaluation Profond : BandDPER}
+\textit{\% TODO: Mettre ici un petit résumé de BandDPER si vous avez utilisé le réseau de neurones en move ordering, sinon mentionnez que ça a été exploré comme alternative.}
+
+Bien que l'heuristique manuelle soit performante, les contraintes spatiales fortement non linéaires d'Escampe (notamment la topologie des bandes) se prêtent bien à l'apprentissage. Le modèle \textbf{BandDPER} (Band-Aware Dual-Perspective Equivariant ResNet) a été conçu comme fonction d'évaluation alternative ou support à l'ordonnancement.
+
+% Placeholder pour un screenshot de l'entraînement ou du flowchart de BandDPER
+\begin{figure}[H]
+    \centering
+    % DÉCOMMENTER POUR AFFICHER L'IMAGE
+    % \includegraphics[width=0.8\textwidth]{chemin_vers_screenshot_training.png}
+    \fbox{\rule{0pt}{3in} \rule{0.8\linewidth}{0pt}} % Box vide, remplacer par l'image
+    \caption{Visualisation de l'architecture ou des courbes d'entraînement du modèle BandDPER.}
+    \label{fig:banddper_training}
+\end{figure}
+
+\section{Stratégie Initiale : Placement et Ouvertures}
+\subsection{Principes de Placement (Opening Book)}
+L'issue de la partie dépend grandement du positionnement initial. Contrairement aux Échecs, le plateau de départ d'Escampe est défini par les joueurs. Notre agent intègre une bibliothèque de placements de départ (\textit{Opening Book}) garantissant de solides propriétés structurelles :
+\begin{itemize}
+    \item \textbf{Couverture de toutes les bandes} : Les Paladins doivent couvrir idéalement les bandes 1, 2 et 3. Un déséquilibre offrirait à l'adversaire l'opportunité de cibler une bande où l'agent serait contraint de passer.
+    \item \textbf{Dispersion sur les colonnes} : Éviter les grappes de Paladins qui se bloquent mutuellement.
+    \item \textbf{Sécurité de la Licorne} : Ne pas murer la Licorne avec ses propres pièces, tout en s'assurant qu'elle ne soit pas au centre géométrique sans couverture, privilégiant les cases "double-bande" pour l'équilibre entre mobilité et défense.
+\end{itemize}
+Différentes stratégies (\textit{Balanced}, \textit{Central Pressure}) ont été testées pour varier les parties et éviter la prévisibilité. Pendant le temps de calcul disponible au démarrage de l'application, l'agent utilise le \textit{Pondering}~\cite{cp_pondering} pour anticiper.
+
+\section{Gestion du Temps Réel}
+\label{sec:time}
+La communication avec le serveur impose des temps limites stricts sous peine de défaite immédiate. Nous avons implémenté un \texttt{TimeManager}~\cite{cp_time} hybride avec gestion dynamique des bornes.
+
+\begin{itemize}
+    \item \textbf{Estimation du temps par coup} : Le temps de base alloué est calculé en divisant le temps global restant par une estimation dynamique du nombre de coups restants. Cette estimation s'adapte selon la réserve : 40 coups supposés s'il reste beaucoup de temps ($>$200s), puis descend par paliers (25, 15) jusqu'à 8 coups en fin de partie critique.
+    \item \textbf{Facteur de Complexité} : Un multiplicateur ajuste le budget temporel en fonction du nombre de coups légaux. Si le joueur n'a qu'un ou deux coups quasi-forcés (contrainte de bande), le budget est drastiquement réduit (facteur de 0.3) pour économiser du temps. Dans une position très ouverte ($\ge 20$ coups), le budget augmente (facteur 1.5).
+    \item \textbf{Soft Bound / Hard Bound} : 
+    \begin{itemize}
+        \item La \textit{Soft Bound} (limite logicielle) correspond au budget temporel de base ajusté. Une fois franchie, la boucle d'\textit{Iterative Deepening} s'interrompt pour renvoyer le meilleur coup de la dernière profondeur complète.
+        \item La \textit{Hard Bound} (limite matérielle) agit comme une sécurité absolue, fixée à $3 \times$ la \textit{Soft Bound} (avec un plafond strict à un cinquième du temps total restant). Si elle est atteinte en plein milieu de l'évaluation d'un nœud (lors des appels récursifs du Minimax), l'algorithme coupe instantanément la branche et retourne l'évaluation heuristique courante, empêchant ainsi le dépassement de temps fatal.
+    \end{itemize}
+\end{itemize}
+
+\section{Analyse des Performances et Tests}
+Les performances de l'IA ont été évaluées via un moteur de test autonome opposant plusieurs versions de notre agent.
+
+\subsection{Évaluation Elo et Test SPRT}
+L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées grâce au Sequential Probability Ratio Test (SPRT)~\cite{cp_testing} sur des milliers de parties générées automatiquement. Ce processus itératif garantit statistiquement qu'une modification logicielle apporte un gain Elo réel avant d'être validée.
+
+% Placeholder pour un screenshot de progression Elo
+\begin{figure}[H]
+    \centering
+    % DÉCOMMENTER POUR AFFICHER L'IMAGE
+    % \includegraphics[width=0.7\textwidth]{chemin_vers_screenshot_elo.png}
+    \fbox{\rule{0pt}{3in} \rule{0.7\linewidth}{0pt}} % Box vide, remplacer par l'image
+    \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT).}
+    \label{fig:elo_ranking}
+\end{figure}
+
+\subsection{Validation de la Conduite Autonome}
+Les protocoles de communication avec l'arbitre ont été validés localement en s'assurant qu'aucun dépassement de délai n'intervenait et que tous les coups générés restaient strictement conformes aux règles topologiques du jeu.
+
+\section{Conclusion et Difficultés Rencontrées}
+La mise au point de cette IA pour le jeu d'Escampe a été un défi algorithmique enrichissant. Les principales difficultés ont résidé dans :
+\begin{itemize}
+    \item La compréhension initiale des symétries brisées du plateau (l'absence d'uniformité due aux bandes asymétriques complexifie fortement la pré-détermination de patterns géométriques réguliers).
+    \item Le débogage subtil inhérent à l'algorithme Alpha-Bêta, notamment lors de l'intégration de l'ordonnancement dynamique des coups et de la gestion asynchrone des limites temporelles (\textit{Hard bounds}).
+    \item La conception d'une heuristique qui ne se laisse pas piéger par l'effet d'horizon, exacerbé dans Escampe par les réactions en chaîne de la mécanique de passe obligatoire.
+\end{itemize}
+L'agent final représente une synthèse robuste entre techniques classiques de la programmation de jeux à information parfaite et optimisation mathématique de topologie.
+
+% ── Bibliographie ──────────────────────────────────────────────────────────────
+\newpage
+\begin{thebibliography}{9}
+
+\bibitem{cp_alphabeta}
+Chess Programming Wiki,
+\textit{Alpha-Beta},
+\url{https://www.chessprogramming.org/Alpha-Beta}
+
+\bibitem{cp_bitboards}
+Chess Programming Wiki,
+\textit{Bitboards},
+\url{https://www.chessprogramming.org/Bitboards}
+
+\bibitem{cp_iterative_deepening}
+Chess Programming Wiki,
+\textit{Iterative Deepening},
+\url{https://www.chessprogramming.org/Iterative_Deepening}
+
+\bibitem{cp_time}
+Chess Programming Wiki,
+\textit{Time Management},
+\url{https://www.chessprogramming.org/Time_Management}
+
+\bibitem{cp_pondering}
+Chess Programming Wiki,
+\textit{Pondering},
+\url{https://www.chessprogramming.org/Pondering}
+
+\bibitem{cp_move_ordering}
+Chess Programming Wiki,
+\textit{Move Ordering},
+\url{https://www.chessprogramming.org/Move_Ordering}
+
+\bibitem{cp_killer}
+Chess Programming Wiki,
+\textit{Killer Heuristic},
+\url{https://www.chessprogramming.org/Killer_Heuristic}
+
+\bibitem{cp_nullmove}
+Chess Programming Wiki,
+\textit{Null Move Pruning},
+\url{https://www.chessprogramming.org/Null_Move_Pruning}
+
+\bibitem{cp_lmr}
+Chess Programming Wiki,
+\textit{Late Move Reductions},
+\url{https://www.chessprogramming.org/Late_Move_Reductions}
+
+\bibitem{cp_zobrist}
+Chess Programming Wiki,
+\textit{Zobrist Hashing},
+\url{https://www.chessprogramming.org/Zobrist_Hashing}
+
+\bibitem{cp_testing}
+Chess Programming Wiki,
+\textit{Match Statistics (SPRT)},
+\url{https://www.chessprogramming.org/Match_Statistics}
+
+\end{thebibliography}
+
+\end{document}
