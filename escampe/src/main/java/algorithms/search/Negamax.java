@@ -110,30 +110,53 @@ public class Negamax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
 	 * Root level search - tries all possible moves and returns the best one
 	 */
 	private M negamax(B board, R playerRole, long remainingTimeMs) {
-		M bestMove = null;
-		int bestValue = Integer.MIN_VALUE;
-		int alpha = Integer.MIN_VALUE;
-		int beta = Integer.MAX_VALUE;
-
-		bestMove = board.possibleMoves(playerRole).get(0); // Default to first move if no better move is found
-		TimeManager timeManager = new TimeManager(remainingTimeMs, board.possibleMoves(playerRole).size());
-
-        R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
-		for (M move : board.possibleMoves(playerRole)) {
-			if (timeManager.shouldStopSoft()) {
-				// LOGGER.info("Soft time limit reached, returning best move found so far.");
-				break;
-			}
-			B nextBoard = board.copy();
-			nextBoard.play(move, playerRole);
-			int value = -maxValue(nextBoard, opponentRole, depthMax - 1, -beta, -alpha, timeManager);
-			if (value > bestValue || bestMove == null) {
-				bestValue = value;
-				bestMove = move;
-			}
-			alpha = Math.max(alpha, bestValue);
+		java.util.List<M> moves = board.possibleMoves(playerRole);
+		if (moves == null || moves.isEmpty()) {
+			return null;
 		}
-		return bestMove;
+
+		// Default to first move
+		M bestMove = moves.get(0);
+		M lastCompletedBest = bestMove;
+
+		TimeManager timeManager = new TimeManager(remainingTimeMs, moves.size());
+
+		R opponentRole = (playerRole.equals(playerMaxRole)) ? playerMinRole : playerMaxRole;
+
+		// Iterative deepening: increase search depth from 1..depthMax
+		for (int currentDepth = 1; currentDepth <= depthMax; currentDepth++) {
+			if (timeManager.shouldStopSoft()) {
+				break; // return last completed iteration's best move
+			}
+
+			int alpha = Integer.MIN_VALUE;
+			int beta = Integer.MAX_VALUE;
+			int bestValue = Integer.MIN_VALUE;
+			M iterBest = bestMove;
+
+			for (M move : moves) {
+				if (timeManager.shouldStopSoft()) {
+					break; // stop this iteration early
+				}
+				B nextBoard = board.copy();
+				nextBoard.play(move, playerRole);
+				int value = -maxValue(nextBoard, opponentRole, currentDepth - 1, -beta, -alpha, timeManager);
+				if (value > bestValue || iterBest == null) {
+					bestValue = value;
+					iterBest = move;
+				}
+				alpha = Math.max(alpha, bestValue);
+			}
+
+			// If we completed the iteration without hitting soft stop, update lastCompletedBest
+			if (iterBest != null) {
+				lastCompletedBest = iterBest;
+				bestMove = iterBest;
+				System.out.println("Depth=" + currentDepth + ", bestMove=" + bestMove + ", lastCompletedBest=" + lastCompletedBest);
+			}
+		}
+
+		return lastCompletedBest;
 	}
 
 	/**
