@@ -157,7 +157,6 @@
   - [x] Avoid `instanceof` checks in move generation and evaluation by using separate methods for different piece types.
   - [ ] Flat long[] transposition table
   - [ ] Make-unmake instead of board copy
-  - [ ] Move ordering (TT/killers/history)
   - [ ] Partial selection sort in move list
   - [ ] final methods + avoid virtual dispatch
   - [x] Use `System.arraycopy` for board copying instead of manual loops.
@@ -213,9 +212,9 @@
 
 
 ## Bonus
-- [ ] Study the impact of each heuristic components
-- [ ] Study the impact of each optimization
-- [ ] Create levels of AI for each optimization
+- [x] Study the impact of each heuristic components
+- [x] Study the impact of each optimization
+- [x] Create levels of AI for each optimization
 - [x] Elo rating for bots: update with $R_A' = R_A + K(S_A - E_A)$ where $E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$ and $K=32$, $S_A=1$ for win, $0.5$ for draw, $0$ for loss.
     Sequential Probability Ratio Test (SPRT) for engine evaluation:
     https://tests.stockfishchess.org/tests/view/696a9e83cec152c6220c1d1d :
