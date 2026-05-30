@@ -257,7 +257,7 @@ class EscampeDataset(Dataset):
             # Data augmentation
             self.data.append((
                 torch.tensor(x_opp,  dtype=torch.float32),
-                torch.tensor(x_opp,   dtype=torch.float32),
+                torch.tensor(x_me,   dtype=torch.float32),
                 torch.tensor(esc_opp, dtype=torch.float32),
                 torch.tensor(esc_me_opp,  dtype=torch.float32),
                 torch.tensor(fp_opp,     dtype=torch.float32),
