@@ -263,7 +263,14 @@ L'entraînement utilise une perte MSE, l'optimiseur AdamW ($\text{lr}=10^{-3}$, 
 
 Pour l'intégration Java, BatchNorm est replié analytiquement dans les couches adjacentes avant l'export (éliminant les divisions au moment de l'inférence), puis les poids sont sérialisés en JSON ou exportés via ONNX Runtime (latence cible $\sim$1--2 µs pour le modèle INT8 de 25K paramètres quantifiés). Une \textbf{tête de politique} ajoutant une distribution sur les $\sim$96 coups légaux a été envisagée pour améliorer l'ordonnancement des coups à la racine.
 
-\subsubsection*{Limites et statut d'intégration}
+\subsubsection*{Limites, ressources et statut d'intégration}
+
+Le modèle pré-entraîné BandDPER et le jeu de données d'Escampe généré pour son apprentissage sont disponibles publiquement :
+\begin{itemize}
+    \item \textbf{Modèle Hugging Face} : \url{https://huggingface.co/Bluefir/BandDPER}
+    \item \textbf{Dataset Hugging Face} : \url{https://huggingface.co/datasets/Bluefir/escampe-dataset}
+\end{itemize}
+Pour plus d'informations techniques détaillées sur l'architecture, le processus d'entraînement et l'équivariance du modèle, veuillez consulter le document PDF dédié au modèle BandDPER (\texttt{model/BandDPER.pdf}).
 
 BandDPER n'a pas été retenu comme heuristique principale : la latence d'inférence depuis Java reste incompatible avec les contraintes de temps par nœud de l'alpha-bêta profond. Son usage le plus prometteur reste l'ordonnancement à la racine (coût ponctuel, non répété), laissé comme piste de développement futur.
 
