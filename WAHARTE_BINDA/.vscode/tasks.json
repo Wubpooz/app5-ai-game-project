@@ -1,0 +1,176 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Compile Game (Gradle)",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["compileJava"],
+      "options": {
+        "cwd": "${workspaceFolder}/escampe"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$javac"]
+    },
+    {
+      "label": "Start Game Server",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        "libraries/escampeobf.jar",
+        "escampe.ServeurJeu",
+        "${input:port}",
+        "${input:gamesCount}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Launch Random Player (Jar)",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        "libraries/escampeobf.jar",
+        "escampe.ClientJeu",
+        "escampe.JoueurAleatoire",
+        "localhost",
+        "${input:port}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Launch Human Player (Jar)",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        "libraries/escampeobf.jar",
+        "escampe.ClientJeu",
+        "escampe.JoueurHumain",
+        "localhost",
+        "${input:port}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Launch Custom Local Player",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        "escampe/build/classes/java/main;libraries/escampeobf.jar",
+        "io.ClientJeu",
+        "${input:playerClass}",
+        "localhost",
+        "${input:port}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "Compile Game (Gradle)",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Launch Solo Game (Local)",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        "escampe/build/classes/java/main;libraries/escampeobf.jar",
+        "io.Solo",
+        "${input:player1Class}",
+        "${input:player2Class}",
+        "dummy1",
+        "dummy2"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "Compile Game (Gradle)",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Export Training Data",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [
+        "runDataExport",
+        "--args=--size 100 --output training_data.json"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/escampe"
+      },
+      "dependsOn": "Compile Game (Gradle)",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "port",
+      "type": "promptString",
+      "description": "Server port",
+      "default": "1234"
+    },
+    {
+      "id": "gamesCount",
+      "type": "promptString",
+      "description": "Number of games to play",
+      "default": "1"
+    },
+    {
+      "id": "playerClass",
+      "type": "promptString",
+      "description": "Custom player class name",
+      "default": "game.AIPlayer"
+    },
+    {
+      "id": "player1Class",
+      "type": "promptString",
+      "description": "Player 1 Class (Blanc)",
+      "default": "game.AIPlayer"
+    },
+    {
+      "id": "player2Class",
+      "type": "promptString",
+      "description": "Player 2 Class (Noir)",
+      "default": "game.AIPlayer"
+    }
+  ]
+}
