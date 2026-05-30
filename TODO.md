@@ -88,7 +88,7 @@
 
 - [x] Negamax with alpha-beta pruning: since the game is zero-sum, we can simplify the implementation by using a single function that returns the score from the perspective of the current player. The opponent's best score is just the negative of our best score.
 
-- [ ] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
+- [x] [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening): start with a shallow depth and increase it until time runs out, always keeping track of the best move found so far.
   - [ ] [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows): when doing iterative deepening, instead of starting each deeper search with alpha=-inf and beta=+inf, we can start with a narrow window around the previous iteration's score (e.g., alpha=prev_score-50, beta=prev_score+50). This can lead to faster cutoffs if the score doesn't change much between iterations. If the search fails low or high, we can widen the window and re-search. Be careful with the choice of window size to balance between speed and the risk of re-searching.
 
 - [ ] Repetition detection using the transposition table: if we encounter the same board position again, we can detect a draw by repetition.
@@ -119,7 +119,7 @@
   - $\mathcal{T}$: mobility/pass pressure — reward for our legal moves, penalty for opponent's legal moves, large penalty when we must pass, reward when opponent must pass
   - TODO: Band-aware distance (BFS ply distance) instead of Manhattan distance
 
-- [ ] Time management: 
+- [x] Time management: 
   - Spend more time in complex midgame positions (high branching factor, many legal moves).
   - Spend less time in forced/obvious positions (only 1–2 legal moves due to band constraint).
   ```java
