@@ -2,6 +2,9 @@ package game;
 
 import interfaces.IJoueur;
 import java.util.concurrent.atomic.AtomicReference;
+import algorithms.evaluation.HeuristicConfig;
+import algorithms.evaluation.Heuristic;
+import algorithms.search.NegamaxKH;
 
 
 public class EscampeAIPlayer implements IJoueur {
@@ -44,14 +47,9 @@ public class EscampeAIPlayer implements IJoueur {
     this.board.initializeBoard();
 
     if (this.ai == null) {
-      interfaces.IHeuristic<EscampeBoard, PlayerColor> heuristic = new algorithms.evaluation.Heuristic();
-      this.ai = new algorithms.search.Negamax<>(this.role, this.opponentRole, heuristic);
-      // // to test differents algorithms against each other :
-      // if (this.role == PlayerColor.WHITE) {
-      //   this.ai = new algorithms.search.Negamax<>(this.role, this.opponentRole, heuristic);
-      // } else {
-      //   this.ai = new algorithms.search.AlphaBeta<>(this.role, this.opponentRole, heuristic);
-      // }
+      HeuristicConfig bestConfig = HeuristicConfig.createAblated("bandcoverage");
+      interfaces.IHeuristic<EscampeBoard, PlayerColor> heuristic = new Heuristic(bestConfig);
+      this.ai = new NegamaxKH(this.role, this.opponentRole, heuristic, 6, true);
     }
   }
 
