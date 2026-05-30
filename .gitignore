@@ -8,7 +8,5 @@
 __pycache__/
 *.pyc
 *.pkl
-training_data.json
 
-
-media/
+**/model/data
