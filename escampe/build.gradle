@@ -33,6 +33,7 @@ jar {
 
 // Create a fat (uber) JAR containing dependencies for easy distribution
 task fatJar(type: Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveBaseName = project.name + '-all'
     archiveClassifier = ''
     manifest {
