@@ -88,10 +88,17 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
   private M minimax(B board, R playerRole, long remainingTimeMs) {
     M bestMove = null;
     int bestValue = Integer.MIN_VALUE;
+
+    bestMove = board.possibleMoves(playerRole).get(0);
+    TimeManager timeManager = new TimeManager(remainingTimeMs, board.possibleMoves(playerRole).size());
+
     for (M move : board.possibleMoves(playerRole)) {
+      if(timeManager.shouldStopSoft()) {
+        break;
+      }
       B nextBoard = board.copy();
       nextBoard.play(move, playerRole);
-      int value = minValue(nextBoard, playerMinRole, depthMax - 1);
+      int value = minValue(nextBoard, playerMinRole, depthMax - 1, timeManager);
       if (value > bestValue || bestMove == null) {
         bestValue = value;
         bestMove = move;
@@ -100,7 +107,10 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
     return bestMove;
   }
 
-  private int maxValue(B board, R playerRole, int depth) {
+  private int maxValue(B board, R playerRole, int depth, TimeManager timeManager) {
+    if (timeManager.shouldStopHard()) {
+      return h.eval(board, playerMaxRole);
+    }
     if (board.isGameOver() || depth == 0) {
       nbLeaves++;
       return h.eval(board, playerMaxRole);
@@ -110,13 +120,16 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
     for (M move : board.possibleMoves(playerRole)) {
       B nextBoard = board.copy();
       nextBoard.play(move, playerRole);
-      value = Math.max(value, minValue(nextBoard, playerMinRole, depth - 1));
+      value = Math.max(value, minValue(nextBoard, playerMinRole, depth - 1, timeManager));
     }
     nbNodes++;
     return value;
   }
 
-  private int minValue(B board, R playerRole, int depth) {
+  private int minValue(B board, R playerRole, int depth, TimeManager timeManager) {
+    if (timeManager.shouldStopHard()) {
+      return h.eval(board, playerMaxRole);
+    }
     if (board.isGameOver() || depth == 0) {
       nbLeaves++;
       return h.eval(board, playerMaxRole);
@@ -126,7 +139,7 @@ public class MiniMax<M extends IMove, R extends IRole, B extends IBoard<M,R,B>> 
     for (M move : board.possibleMoves(playerRole)) {
       B nextBoard = board.copy();
       nextBoard.play(move, playerRole);
-      value = Math.min(value, maxValue(nextBoard, playerMaxRole, depth - 1));
+      value = Math.min(value, maxValue(nextBoard, playerMaxRole, depth - 1, timeManager));
     }
     nbNodes++;
     return value;
