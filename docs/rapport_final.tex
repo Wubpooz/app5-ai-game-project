@@ -349,8 +349,8 @@ Les colonnes d'entrée sont les suivantes :
   \item \texttt{score} : le score d'évaluation minimax obtenu à profondeur 5, normalisé entre $-1{,}0$ et $+1{,}0$ depuis la perspective du joueur actif.
 \end{itemize}
 
-En faisant un premier entraînement sur 50k positions, on obtient ce modèle (qui fait bien 2.9Mo):
 
+En faisant un premier entraînement sur 50k positions, on obtient ce modèle (qui fait bien 2.9Mo):
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.7\textwidth]{images/model 50k.png}
@@ -365,8 +365,18 @@ En revanche, on observe que le modèle overfit extrêmement :
     \caption{Overfitting du modèle après entraînement initial}
     \label{fig-model-overfit-50k}
   \end{figure}
-  
+
 Le modèle à tout de même été exporté sur \href{https://huggingface.co/Bluefir/BandDPER}{\textbf{Modèle Hugging Face}}.
+Pour régler le problème d'overfitting, j'ai mis à jour le modèle avec un dropout pour régulariser l'entraînement, j'ai augmenté la taille du dataset à 3 million de samples (6 millions en comptant les perspectives inversées).
+Cependant, je n'ai pas pu observer le résultat faute de temps d'entraînement suffisant:  
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/model slow training.png}
+    \caption{Entraînement sur 6 millions de positions avec dropout}
+    \label{fig-model-6m}
+\end{figure}
+
+
 Pour plus d'informations techniques détaillées sur l'architecture, le processus d'entraînement et l'équivariance du modèle, veuillez consulter le document PDF dédié au modèle BandDPER (\texttt{model/BandDPER.pdf}).
 
 BandDPER n'a pas été retenu comme heuristique principale : la latence d'inférence depuis Java reste incompatible avec les contraintes de temps par noeud de l'alpha-Beta profond. Son usage le plus prometteur reste l'ordonnancement à la racine (coût ponctuel, non répété), laissé comme piste de développement futur.
@@ -388,7 +398,7 @@ Différentes stratégies (\textit{Balanced}, \textit{Central Pressure}, \textit{
 
 
 \subsection{Stratégie par Phase de Jeu}
-Une stratégie différenciée par phase améliore significativement les performances :
+Une stratégie différenciée par phase peut améliorer significativement les performances :
 \begin{description}
     \item[Début de partie] Placement équilibré couvrant plusieurs bandes (1, 2, 3). Licorne protégée derrière des Paladins sans être enfermée. Éviter les couloirs directs vers sa Licorne.
     \item[Milieu de partie] Jouer le tempo : choisir les cases d'arrivée pour imposer une mauvaise bande adverse ou forcer un passe. Créer des menaces doubles sur la Licorne tout en maintenant une défense active. Limiter les coups qui offrent une bande favorable à l'adversaire.
@@ -426,22 +436,32 @@ Les performances de l'IA ont été évaluées via un moteur de test autonome opp
 L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées via un système de tournoi automatique (\texttt{TournamentRunner}) opposant de multiples configurations de notre agent. Le classement repose sur le rating Elo avec mise à jour $R' = R + K(S - E)$, où $E = 1/(1 + 10^{(R_B - R_A)/400})$ et $K = 32$. Les configurations testées incluent différentes profondeurs (2 à 6), les deux algorithmes de recherche (AlphaBetaKH et NegamaxKH), les trois variants d'heuristique (Default, SimplexFull, BandCoverage-ablated) et l'activation ou non du Pondering.
 
 Pour valider statistiquement qu'une modification apporte un gain Elo réel avant de la valider, nous utilisons le \textbf{SPRT}~\cite{cp_testing} (\textit{Sequential Probability Ratio Test}). Le SPRT compare deux hypothèses : $H_0$ (les deux agents sont équivalents, Elo $= 0$) contre $H_1$ (l'un est meilleur, Elo $> 0$). Le test s'arrête dès que les données accumulées sont suffisantes pour accepter ou rejeter $H_0$ au seuil de confiance fixé (95\%), évitant de jouer des parties inutiles. Ce processus itératif, inspiré des pratiques de Stockfish, garantit que seules les améliorations réelles progressent vers la version finale.
-
-% Placeholder pour un screenshot de progression Elo
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{images/ranking.png}
-    \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT).}
+    \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT) sur 2000 parties par matchup.}
     \label{fig-elo-ranking}
+\end{figure}
+Le test n'est significatif que lorsque le nombre de parties jouées dépasse un certain seuil (généralement plusieurs centaines ou milliers) pour réduire l'impact de la variance. 
+A noter aussi que certaines améliorations sont invisibles à faible profondeur (ex: ordonnancement des coups) et ne montrent leur plein potentiel qu'à partir de la profondeur 4 ou 5, d'où l'importance de tester sur plusieurs profondeurs.
+Voici le premier test réalisé:  
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/first ranking with tuning.png}
+    \caption{Premier test de classement Elo après implémentation des fonctionnalités principales et heuristiques calibrées.}
+    \label{fig-sprt-test}
 \end{figure}
 
 
 \subsection{Validation de la Conduite Autonome}
 Les protocoles de communication avec l'arbitre ont été validés localement en s'assurant qu'aucun dépassement de délai n'intervenait et que tous les coups générés restaient strictement conformes aux règles topologiques du jeu.
 
+
+
+
+
 \section{Bilan des Fonctionnalités et Statut du TODO}
 \label{sec-todo-status}
-
 Afin de mesurer le travail accompli au cours du projet et de structurer les développements futurs, un suivi rigoureux a été maintenu sous la forme d'un tableau d'objectifs (TODO). Cette section dresse le bilan des fonctionnalités implémentées, validées et de celles envisagées comme perspectives d'amélioration.
 
 
@@ -461,7 +481,6 @@ Afin de mesurer le travail accompli au cours du projet et de structurer les dév
 \begin{itemize}
     \item \textbf{Contrôle de Bande dans l'Heuristique} : Bien que central dans les règles du jeu, le contrôle manuel des bandes a été rejeté après tests SPRT et ablation, car il nuisait statistiquement au classement Elo global de l'agent.
     \item \textbf{Utilisation Directe du Réseau de Neurones en Jeu} : Le réseau BandDPER n'a pas été retenu comme fonction d'évaluation principale dans l'arbre en raison de sa latence d'évaluation trop élevée par rapport à l'heuristique linéaire optimisée en Java. Il est en revanche préconisé pour l'ordonnancement à la racine.
-    \item \textbf{Noyaux Asymétriques $1\times6$/$6\times1$ dans l'Encoder} : Rejetés au profit de noyaux $3\times3$ standard à la suite d'une meilleure modélisation des mouvements brisés d'Escampe (qui touchent aussi les diagonales).
 \end{itemize}
 
 
@@ -470,7 +489,6 @@ Afin de mesurer le travail accompli au cours du projet et de structurer les dév
     \item \textbf{Table de Transposition et Zobrist Hashing} : Le schéma d'encodage par hachage Zobrist a été conçu mais n'a pas été finalisé dans l'exécution principale. Son intégration permettrait de stocker les scores d'évaluation des noeuds déjà parcourus et d'identifier instantanément les répétitions de positions (détection de boucles de jeu).
     \item \textbf{Élagages Sélectifs Avancés} : Intégration de techniques d'élagage plus agressives comme le \textit{Null-Move Pruning} (pour éliminer rapidement les branches très favorables), le \textit{Late Move Reduction} (LMR) pour réduire la profondeur d'exploration des coups moins prometteurs, et la recherche de quiescence (\textit{Quiescence Search}) aux feuilles.
     \item \textbf{Aspiration Windows} : Utilisation de fenêtres de recherche resserrées au lieu d'une fenêtre de recherche infinie lors de l'approfondissement itératif, pour maximiser l'élagage lorsque l'évaluation est stable.
-    \item \textbf{BFS Distance} : Remplacement de la distance de Manhattan par une distance calculée par un parcours en largeur (BFS) prenant en compte la topologie exacte des bandes et les obstacles sur le plateau.
     \item \textbf{Inférence ONNX Quantifiée} : Intégration finale de l'exécuteur ONNX Runtime pour charger le modèle BandDPER quantifié en INT8 et l'évaluer en temps réel sous une latence ciblée de 1 à 2 $\mu$s par coup.
 \end{itemize}
 
