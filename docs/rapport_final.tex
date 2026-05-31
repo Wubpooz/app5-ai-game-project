@@ -70,7 +70,7 @@ Ce rapport détaille la conception et la mise en oeuvre d'une IA capable de joue
 
 \newpage
 \section{Introduction}
-Dans le cadre de ce projet, l'objectif principal est de développer une Intelligence Artificielle capable de conduire de façon autonome une partie d'Escampe en temps limité (300s à 900s par joueur). L'agent doit communiquer avec un arbitre validant les coups et garantissant le respect des contraintes temporelles.
+Dans le cadre de ce projet, l'objectif principal est de développer une Intelligence Artificielle capable de conduire de façon autonome une partie d'Escampe~\cite{escampe_rules} en temps limité (300s à 900s par joueur). L'agent doit communiquer avec un arbitre validant les coups et garantissant le respect des contraintes temporelles.
 Le jeu d'Escampe se caractérise par des règles de déplacement atypiques (dépendance à la bande ciblée par l'adversaire) et une asymétrie de la topologie du plateau. Ces spécificités requièrent des choix algorithmiques pointus, s'écartant parfois des implémentations classiques des jeux à information parfaite.
 
 
@@ -91,7 +91,7 @@ En modélisant un état de jeu par les positions des 12 pièces parmi 36 cases e
 \[
 \mathcal{M} = \binom{36}{1}\binom{35}{5}\binom{30}{1}\binom{29}{5} \times 4 = \frac{36!}{(5!)^2\,(36-12)!} \times 4 \approx 1{,}67 \times 10^{14}
 \]
-états distincts. Ce chiffre confirme que toute exploration exhaustive est impossible et que les heuristiques et l'élagage sont indispensables.
+états distincts. Ce chiffre confirme que toute exploration exhaustive est impossible et que les heuristiques et l'élagage sont indispensables. Contrairement à des jeux entièrement résolus comme le Puissance 4~\cite{connect4_solve}, l'Escampe exige une évaluation heuristique dynamique constante.
 
 \paragraph{Sources de difficulté.}
 Au-delà de la complexité combinatoire, les principales difficultés algorithmiques sont : (i) la contrainte de bande qui conditionne les pièces jouables au tour suivant, créant des effets de tempo et de forçage, (ii) l'absence de simplification rapide (pas de capture de pions), qui allonge les séquences tactiques et (iii) l'importance du placement initial qui engendre une forte variabilité de départ.
@@ -233,7 +233,7 @@ $w_9$ (Opp Band Control) & $0$ & $0$ & $-3$ & $-39$ \\
 
 
 \paragraph{Calibration des poids par SPSA.}
-Les neuf poids de la formule ont été calibrés empiriquement via l'algorithme SPSA (\textit{Simultaneous Perturbation Stochastic Approximation})~\cite{spall1998}, une méthode de descente de gradient stochastique particulièrement adaptée à l'optimisation de fonctions d'évaluation de jeux~\cite{cp_testing}. À chaque itération, les paramètres sont perturbés dans deux directions aléatoires ($\pm \delta$), deux parties sont jouées (une dans chaque configuration), et le gradient estimé est utilisé pour mettre à jour les poids. Le processus a été exécuté sur 50 itérations avec 16 paires de parties par itération (32 parties/itération), soit 1\,600 parties par run, en parallèle sur tous les coeurs disponibles.
+Les neuf poids de la formule ont été calibrés empiriquement via l'algorithme SPSA (\textit{Simultaneous Perturbation Stochastic Approximation})~\cite{spall1998}, une méthode de descente de gradient stochastique particulièrement adaptée à l'optimisation de fonctions d'évaluation de jeux~\cite{cp_testing}, également popularisée dans l'ajustement automatique de poids d'IA de plateau modernes~\cite{monroe_chess_ai}. À chaque itération, les paramètres sont perturbés dans deux directions aléatoires ($\pm \delta$), deux parties sont jouées (une dans chaque configuration), et le gradient estimé est utilisé pour mettre à jour les poids. Le processus a été exécuté sur 50 itérations avec 16 paires de parties par itération (32 parties/itération), soit 1\,600 parties par run, en parallèle sur tous les coeurs disponibles.
 
 Une étude d'ablation a révélé que le terme de contrôle des bandes ($w_8, w_9$) ne contribuait pas positivement : la configuration à 7 paramètres (termes de bande forcés à zéro) surpassait la configuration à 9 paramètres dans les tests croisés. La configuration finale retenue (\texttt{createAblated("bandcoverage")}) exclut donc ce terme. Ce résultat est contre-intuitif au vu de l'importance du mécanisme de bandes dans les règles du jeu, mais il est validé statistiquement. En revanche, les réglages Simplex et Bayes montrent que forcer l'adversaire sur des bandes non couvertes est une stratégie viable si elle est combinée à des poids d'attaque très agressifs.
 
@@ -263,7 +263,7 @@ GNN & Invariant aux symétries, mais graphe dynamique, complexe et lent & À év
 \label{tab-existing-models}
 \end{table}
 
-Le modèle retenu est un \textbf{ResNet dual-perspective avec encodeur CNN spatial}, inspiré du design NNUE~\cite{cp_nnue} (dual-perspective, ClippedReLU, raccourci de sortie direct) et des réseaux siamois~\cite{bromley1993}.
+Le modèle retenu est un \textbf{ResNet dual-perspective avec encodeur CNN spatial}, inspiré du design NNUE~\cite{cp_nnue} (dual-perspective, ClippedReLU, raccourci de sortie direct), des réseaux siamois~\cite{bromley1993} et de la structure résiduelle d'AlphaZero~\cite{alphazero_net}.
 
 
 \subsection*{Architecture}
@@ -487,7 +487,7 @@ Les performances de l'IA ont été évaluées via un moteur de test autonome opp
 
 
 \subsection{Évaluation Elo et Test SPRT}
-L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées via un système de tournoi automatique (\texttt{TournamentRunner}) opposant de multiples configurations de notre agent. Le classement repose sur le rating Elo avec mise à jour $R' = R + K(S - E)$, où $E = 1/(1 + 10^{(R_B - R_A)/400})$ et $K = 32$. Les configurations testées incluent différentes profondeurs (2 à 6), les deux algorithmes de recherche (AlphaBetaKH et NegamaxKH), les trois variants d'heuristique (Default, SimplexFull, BandCoverage-ablated) et l'activation ou non du Pondering.
+L'amélioration des heuristiques et l'optimisation des structures de données ont été quantifiées via un système de tournoi automatique (\texttt{TournamentRunner}) opposant de multiples configurations de notre agent, une méthode standardisée inspirée par les arènes de test d'IA de jeux~\cite{chess_tournament_youtube}. Le classement repose sur le rating Elo avec mise à jour $R' = R + K(S - E)$, où $E = 1/(1 + 10^{(R_B - R_A)/400})$ et $K = 32$. Les configurations testées incluent différentes profondeurs (2 à 6), les deux algorithmes de recherche (AlphaBetaKH et NegamaxKH), les trois variants d'heuristique (Default, SimplexFull, BandCoverage-ablated) et l'activation ou non du Pondering.
 
 Pour valider statistiquement qu'une modification apporte un gain Elo réel avant de la valider, nous utilisons le \textbf{SPRT}~\cite{cp_testing} (\textit{Sequential Probability Ratio Test}). Le SPRT compare deux hypothèses : $H_0$ (les deux agents sont équivalents, Elo $= 0$) contre $H_1$ (l'un est meilleur, Elo $> 0$). Le test s'arrête dès que les données accumulées sont suffisantes pour accepter ou rejeter $H_0$ au seuil de confiance fixé (95\%), évitant de jouer des parties inutiles. Ce processus itératif, inspiré des pratiques de Stockfish, garantit que seules les améliorations réelles progressent vers la version finale.
 \begin{figure}[H]
@@ -665,6 +665,31 @@ D. Silver et al.,
 \textit{Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm},
 arXiv:1712.01815, 2017.
 \url{https://arxiv.org/abs/1712.01815}
+
+\bibitem{escampe_rules}
+Jeux Stratégie,
+\textit{Règles complètes du jeu d'Escampe},
+\url{http://jeuxstrategieter.free.fr/Escampe_complet.php}
+
+\bibitem{connect4_solve}
+2swap,
+\textit{I Solved Connect 4}, vidéo YouTube,
+\url{https://youtube.com/watch?v=KaljD3Q3ct0}
+
+\bibitem{monroe_chess_ai}
+D. Monroe,
+\textit{I Improved the Strongest Chess AI | My Best Idea Yet}, vidéo YouTube,
+\url{https://youtube.com/watch?v=geHcAS1fFg8}
+
+\bibitem{alphazero_net}
+Chess Programming Wiki,
+\textit{AlphaZero Network Architecture},
+\url{https://www.chessprogramming.org/AlphaZero#Network_Architecture}
+
+\bibitem{chess_tournament_youtube}
+D. Monroe,
+\textit{I Ran a Chess Programming Tournament, Here's How it Went!}, vidéo YouTube,
+\url{https://youtu.be/Ne40a5LkK6A?si=YQ0QKJNYBpj5fA3l}
 
 \end{thebibliography}
 
