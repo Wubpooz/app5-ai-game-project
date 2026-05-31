@@ -1,3 +1,0 @@
-jar : BindaWaharte.jar
-clientClass : io.ClientJeu
-mainClass : game.EscampeAIPlayer

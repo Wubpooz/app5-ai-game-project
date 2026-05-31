@@ -15,6 +15,7 @@
     - [6. Est-il souhaitable pour ce jeu d'adopter une stratégie particulière en début, milieu ou fin de partie ?](#6-est-il-souhaitable-pour-ce-jeu-dadopter-une-stratégie-particulière-en-début-milieu-ou-fin-de-partie-)
     - [7. Donnez un majorant du nombre de coups dans une partie. Détaillez les techniques que vous comptez mettre en oeuvre pour respecter une contrainte de temps imposée sur la durée totale d'une partie.](#7-donnez-un-majorant-du-nombre-de-coups-dans-une-partie-détaillez-les-techniques-que-vous-comptez-mettre-en-oeuvre-pour-respecter-une-contrainte-de-temps-imposée-sur-la-durée-totale-dune-partie)
   - [Versioning plan](#versioning-plan)
+  - [Releases](#releases)
   - [References](#references)
 
 ---
@@ -24,7 +25,7 @@
 This is a 2-player game. Each player has 5 paladins and 1 unicorn, either white or black.  
 The goal is to capture the opponent's unicorn by moving a paladin to its position.  
 The pieces are placed on a 6 by 6 grid. Each circle of the grid is either a simple, double, or triple-banded circle.  
-![game board](docs/board.png)
+![game board](docs/images/board.png)
 
 The game starts with the black player choosing a side (top or bottom) of the board and placing their pieces in the first two rows as he pleases. The white player places their pieces and starts the game.
 
