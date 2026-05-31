@@ -134,7 +134,7 @@ Plusieurs choix techniques ont été faits pour maximiser le nombre de noeuds ex
 \begin{itemize}
   \item \textbf{Stratégie Make-Unmake} (annulation de coup) : plutôt que de cloner le plateau à chaque noeud de l'arbre, les coups sont joués sur le plateau courant puis défaits après évaluation (\texttt{board.undo(move, role)}). Cette approche élimine toute allocation mémoire dans la boucle de recherche et réduit la pression sur le \textit{Garbage Collector}.
     \item \textbf{Suppression des appels \texttt{instanceof}} lors de la génération des coups via des méthodes dédiées par type de pièce, évitant le coût du dispatch polymorphique à chaque noeud.
-    \item \textbf{Pré-allocation des structures} : les tableaux de positions de pièces (paladins, licornes) et les masques de Bitboards sont alloués une seule fois. Le tri de la liste des coups est réalisé en place (\textit{insertion sort} sans copie, cf. section~\ref{sec:move_ordering}).
+    \item \textbf{Pré-allocation des structures} : les tableaux de positions de pièces (paladins, licornes) et les masques de Bitboards sont alloués une seule fois. Le tri de la liste des coups est réalisé en place (\textit{insertion sort} sans copie, cf. section~\ref{sec-move-ordering}).
     \item \textbf{Table de transposition (Zobrist Hashing)~\cite{cp_zobrist}} : le schéma d'encodage (XOR de valeurs aléatoires 64 bits par pièce et par case, entrées de table stockant profondeur, type de noeud, score et meilleur coup) a été entièrement conçu mais non intégré dans la version finale par contrainte de temps. Elle constitue l'optimisation la plus prometteuse pour des versions futures, pouvant notamment permettre la détection de répétition de position.
 \end{itemize}
 
@@ -159,7 +159,7 @@ Une amélioration envisagée mais non intégrée dans les délais du projet est 
 
 
 \subsection{Ordonnancement des Coups et Élagage Sélectif}
-\label{sec:move_ordering}
+\label{sec-move-ordering}
 L'efficacité de l'élagage Alpha-Beta dépend directement de la qualité de l'ordonnancement des coups~\cite{cp_move_ordering} : dans le cas idéal, chaque noeud MIN ne considère qu'un seul coup (l'élagage est immédiat). Les deux techniques suivantes, encapsulées dans la classe \texttt{MoveOrderer}, ont été implémentées.
 
 \paragraph{Killer Heuristic~\cite{cp_killer}.}
@@ -219,7 +219,7 @@ GNN & Invariant aux symétries, mais graphe dynamique, complexe et lent & À év
 \bottomrule
 \end{tabular}
 \caption{Comparaison des architectures candidates pour la fonction d'évaluation.}
-\label{tab:existing-models}
+\label{tab-existing-models}
 \end{table}
 
 La combinaison retenue est un \textbf{ResNet dual-perspective avec encodeur CNN spatial}, inspirée du design NNUE~\cite{cp_nnue} (dual-perspective, ClippedReLU, raccourci de sortie direct) et des réseaux siamois~\cite{bromley1993}.
@@ -232,7 +232,7 @@ BandDPER repose sur six composants principaux : (i) un encodeur CNN spatial siam
     \centering
     \includegraphics[width=0.85\textwidth]{model/components/dual_perspective_flowchart.png}
     \caption{Architecture du réseau BandDPER (encodeur CNN dual-perspective + tronc résiduel à skip connections et bypass direct).}
-    \label{fig:banddper_training}
+    \label{fig-banddper-training}
 \end{figure}
 
 
@@ -253,12 +253,12 @@ Canal & Contenu & Type \\
 6 & Masque des cases à bande 3 & \textbf{Fixe} 0/1 \\
 7 & Masque de contrainte de départ & Dynamique 0/1 \\
 8--10 & Cases d'atterrissage légales (bandes 1, 2, 3) & Dynamique 0/1 \\
-11--14 & Taux d'occupation par rangée/colonne (moi / adv.) & Dynamique $[0,1]$ \\
+11---14 & Taux d'occupation par rangée/colonne (moi / adv.) & Dynamique $[0,1]$ \\
 15 & Carte d'attaquants relat. à la licorne & Dynamique 0/1 \\
 \bottomrule
 \end{tabular}
 \caption{Canaux d'entrée pour chaque tenseur de perspective $[B, 16, 6, 6]$.}
-\label{tab:input-channels}
+\label{tab-input-channels}
 \end{table}
 
 Le canal 15 place les paladins adverses dans un référentiel centré sur notre licorne (ancrage en (2,2)), inspiré de l'encodage HalfKP de NNUE~\cite{cp_nnue}. Les canaux 8--10 rendent le mécanisme de forçage de tempo explicitement visible. Les canaux 4--6 (masques de bandes) sont fixes et encodent la topologie non-uniforme du plateau.
@@ -269,7 +269,7 @@ L'encodeur projette chaque tenseur en un vecteur de dimension 128 via : Conv2d$(
     \centering
     \includegraphics[width=0.85\textwidth]{model/components/SSE.png}
     \caption{Structure de l'encodeur spatial partagé (Shared Spatial Encoder) utilisé pour chaque perspective (poids partagés).}
-    \label{fig:shared-spatial-encoder}
+    \label{fig-shared-spatial-encoder}
 \end{figure}
 
 \paragraph{Fusion et tronc résiduel.}
@@ -278,7 +278,7 @@ Les deux embeddings (256 dimensions) sont concaténés avec deux scalaires norma
     \centering
     \includegraphics[width=0.7\textwidth]{model/components/residual_trunk.png}
     \caption{Structure du tronc résiduel avec blocs de correction résiduels (skip connections).}
-    \label{fig:residual-trunk}
+    \label{fig-residual-trunk}
 \end{figure}
 
 \paragraph{Tête de sortie et raccourci.}
@@ -288,7 +288,7 @@ Linear$(258\to64)$ $\to$ ReLU $\to$ Linear$(64\to1)$ $\to$ $\tanh$, produisant u
     \centering
     \includegraphics[width=0.7\textwidth]{model/components/output_head.png}
     \caption{Structure de la tête de sortie avec injection directe du signal de passe forcé (raccourci direct).}
-    \label{fig:output-head}
+    \label{fig-output-head}
 \end{figure}
 
 
@@ -306,7 +306,7 @@ Tête de sortie & $\sim$16\,577 \\
 \bottomrule
 \end{tabular}
 \caption{Compte des paramètres par composant ($\approx$ 2,9 Mo en float32).}
-\label{tab:parameter-count}
+\label{tab-parameter-count}
 \end{table}
 
 Une variante allégée (\texttt{embed\_dim=64}, 2 ResBlocks) atteint $\sim$185K paramètres pour une intégration plus rapide.
@@ -323,27 +323,50 @@ Une \textbf{tête de politique} ajoutant une distribution sur les $\sim$96 coups
 
 
 \subsection*{Limites, ressources et statut d'intégration}
-Nous avons pu générer plusieurs corpus de données comme
-"data export 1m d7 parralel.png"
+Nous avons pu générer plusieurs corpus de données:  
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{WAHARTE_BINDA\screenshots\data export 1m d7 parralel.png}
-    \caption{Structure du tronc résiduel avec blocs de correction résiduels (skip connections).}
-    \label{fig:residual-trunk}
+    \includegraphics[width=0.7\textwidth]{images/data export 1m d7 parralel.png}
+    \caption{Export de 1 million de parties à une profondeur de 7}
+    \label{fig-data-export}
 \end{figure}
 
-En faisant un premier entraînement sur 50k positions, on obtient ce modèle (qui fait bien 2.9Mo):
-"model 50k.png"
-
-En revance on observe que le modèle overfit extrêment:
-"model overfit 50k.png"
-
-
-Le modèle pré-entraîné BandDPER et le jeu de données d'Escampe généré pour son apprentissage sont disponibles publiquement :
+Elle furent ensuite téléchargées sur \href{https://huggingface.co/datasets/Bluefir/escampe-dataset}{\textbf{Hugging Face}} pour l'entraînement du modèle BandDPER:  
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/hugggingface dataset.png}
+    \caption{Dataset sur HuggingFace}
+    \label{fig-dataset}
+\end{figure}
+Les colonnes d'entrée sont les suivantes :
 \begin{itemize}
-    \item \textbf{Modèle Hugging Face} : \url{https://huggingface.co/Bluefir/BandDPER}
-    \item \textbf{Dataset Hugging Face} : \url{https://huggingface.co/datasets/Bluefir/escampe-dataset}
+  \item \texttt{white\_paladins} : un entier long (bitboard) encodant la position des paladins blancs.
+  \item \texttt{white\_unicorn} : l'indice de la case occupée par la licorne blanche (de 0 à 35). Logiquement, tends à être plus proche de 0 que de 35.
+  \item \texttt{black\_paladins} : un entier long (bitboard) encodant la position des paladins noirs.
+  \item \texttt{black\_unicorn} : l'indice de la case occupée par la licorne noire (de 0 à 35). Logiquement, tends à être plus proche de 35 que de 0.
+  \item \texttt{required\_band} : le liseré/la bande imposé par le coup précédent (1, 2, 3 ou 0 si aucune contrainte).
+  \item \texttt{white\_to\_move} : un booléen indiquant si c'est au joueur blanc de jouer.
+  \item \texttt{score} : le score d'évaluation minimax obtenu à profondeur 5, normalisé entre $-1{,}0$ et $+1{,}0$ depuis la perspective du joueur actif.
 \end{itemize}
+
+En faisant un premier entraînement sur 50k positions, on obtient ce modèle (qui fait bien 2.9Mo):
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{images/model 50k.png}
+    \caption{Entraînement initial sur 50k positions}
+    \label{fig-model-50k}
+\end{figure}
+
+En revanche, on observe que le modèle overfit extrêmement :
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/model overfit 50k.png}
+    \caption{Overfitting du modèle après entraînement initial}
+    \label{fig-model-overfit-50k}
+  \end{figure}
+  
+Le modèle à tout de même été exporté sur \href{https://huggingface.co/Bluefir/BandDPER}{\textbf{Modèle Hugging Face}}.
 Pour plus d'informations techniques détaillées sur l'architecture, le processus d'entraînement et l'équivariance du modèle, veuillez consulter le document PDF dédié au modèle BandDPER (\texttt{model/BandDPER.pdf}).
 
 BandDPER n'a pas été retenu comme heuristique principale : la latence d'inférence depuis Java reste incompatible avec les contraintes de temps par noeud de l'alpha-Beta profond. Son usage le plus prometteur reste l'ordonnancement à la racine (coût ponctuel, non répété), laissé comme piste de développement futur.
@@ -378,7 +401,7 @@ Une stratégie différenciée par phase améliore significativement les performa
 
 
 \section{Gestion du Temps Réel}
-\label{sec:time}
+\label{sec-time}
 La communication avec le serveur impose des temps limites stricts sous peine de défaite immédiate. Nous avons implémenté un \texttt{TimeManager}~\cite{cp_time} hybride avec gestion dynamique des bornes.
 
 \begin{itemize}
@@ -407,9 +430,9 @@ Pour valider statistiquement qu'une modification apporte un gain Elo réel avant
 % Placeholder pour un screenshot de progression Elo
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{image.png}
+    \includegraphics[width=0.7\textwidth]{images/ranking.png}
     \caption{Évolution du classement Elo des différentes configurations testées (tests SPRT).}
-    \label{fig:elo_ranking}
+    \label{fig-elo-ranking}
 \end{figure}
 
 
@@ -417,7 +440,7 @@ Pour valider statistiquement qu'une modification apporte un gain Elo réel avant
 Les protocoles de communication avec l'arbitre ont été validés localement en s'assurant qu'aucun dépassement de délai n'intervenait et que tous les coups générés restaient strictement conformes aux règles topologiques du jeu.
 
 \section{Bilan des Fonctionnalités et Statut du TODO}
-\label{sec:todo_status}
+\label{sec-todo-status}
 
 Afin de mesurer le travail accompli au cours du projet et de structurer les développements futurs, un suivi rigoureux a été maintenu sous la forme d'un tableau d'objectifs (TODO). Cette section dresse le bilan des fonctionnalités implémentées, validées et de celles envisagées comme perspectives d'amélioration.
 
