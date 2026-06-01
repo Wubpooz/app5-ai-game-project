@@ -9,5 +9,6 @@ echo "Conversion complete."
 
 # Compile the main BandDPER.tex file to PDF
 echo "Compiling BandDPER.tex to PDF..."
-pdflatex -shell-escape -interaction=nonstopmode "BandDPER.tex"
+# pdflatex -shell-escape -interaction=nonstopmode "BandDPER.tex"
+lualatex "BandDPER.tex"
 echo "Compilation complete."

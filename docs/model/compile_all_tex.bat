@@ -8,7 +8,8 @@ call "%ROOT%components\latex_to_png.bat" "%ROOT%components\dual_perspective_flow
 echo All conversions completed.
 
 echo Compiling BandDPER.tex to PDF...
-pdflatex -shell-escape -interaction=nonstopmode "%ROOT%BandDPER.tex"
+@REM pdflatex -shell-escape -interaction=nonstopmode "%ROOT%BandDPER.tex"
+lualatex "%ROOT%BandDPER.tex"
 if errorlevel 1 (
     echo pdflatex failed. Check the LaTeX source and try again.
     exit /b 1

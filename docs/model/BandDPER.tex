@@ -65,7 +65,7 @@
   \renewcommand{\footrulewidth}{0.4pt}
 }
 
-\title{BandDPER\\\large Band-Aware Dual-Perspective Equivariant ResNet}
+\title{BandDPER\\\large Band-Aware Dual-Perspective Evaluation ResNet}
 \author{Mathieu WAHARTE}
 \date{April 2026}
 
@@ -77,7 +77,7 @@
 \clearpage
 \begin{figure}[p]
   \centering
-  \includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{dual_perspective_flowchart.png}
+  \includegraphics[width=\textwidth,height=0.85\textheight,keepaspectratio]{components/dual_perspective_flowchart.png}
   \caption{Model architecture flowchart for BandDPER.}
   \label{fig:model-architecture-flowchart}
 \end{figure}
@@ -87,17 +87,17 @@
 \section{Analysis}
 
 \subsection{Problem Statement}
-Since the game is a full-information, deterministic, zero-sum game with a small board ($6\times6$) and a fixed topology but non uniform (the band map), we can leverage strong domain knowledge to design an efficient and effective evaluation function. The key challenge is to capture the complex interactions between pieces, the band constraints (creates strong local dependencies between adjacent squares), and the strategic patterns that emerge from the unique movement rules.
+Since the game is a full-information, deterministic, zero-sum game with a small board ($6\times6$) and a fixed but non-uniform topology (the band map), strong domain knowledge can be leveraged to design an efficient evaluation function. The key challenge is to capture the complex interactions between pieces, the band constraints (which create strong local dependencies between adjacent squares), and the strategic patterns that emerge from the unique movement rules.
 
 \subsection{Requirements}
-First, we can be certain that the evaluation function should return a scalar in $[-1, +1]$, where -1 represents a losing position for the current player, +1 represents a winning position, and values in between represent varying degrees of advantage.
+The evaluation function returns a scalar in $[-1, +1]$, where $-1$ represents a losing position for the current player, $+1$ represents a winning position, and intermediate values represent varying degrees of advantage.
 
 The function must capture several key signals:
 \begin{itemize}
   \item Which pieces can legally move right now (band constraint)
   \item How many moves each side has (mobility asymmetry)
   \item Proximity of attackers to the opponent's unicorn, weighted by band alignment and measured in a unicorn-relative coordinate frame
-  \item Unicorn escape routes (counted explicitly as scalar signal)
+  \item Unicorn escape routes (counted explicitly as a scalar signal)
   \item Structural patterns (corridor control, band-type distribution)
   \item Tempo forcing: which band the current move lands on determines the opponent's forced departure
   \item Forced-pass detection: whether the current move leaves the opponent with no legal response
@@ -115,11 +115,11 @@ The main drawback is that it would be slower but according to \href{https://arxi
     \toprule
     Model & Notes & Recommendation \\
     \midrule
-    MLP & Fast & No spatial awareness or relational reasoning, avoid \\
-    CNN & Exploits local spatial patterns and translation equivariance; fast enough & Ok but overkill; translation equivariance may be wrong \\
-    NNUE & Fast incremental updates, dual-perspective design, ClippedReLU (-1 to 1) activation & Doesn't fit current problem size, but dual-perspective, ClippedReLU, king-relative features, and direct output shortcuts are interesting ideas to borrow \\
-    ResNet & Good if baseline evaluation exists & Good, but lacks inherent spatial awareness \\
-    GNN & Movement graph; invariant to symmetries & Avoid due to dynamic graph changes, complexity, and slower performance \\
+    MLP & Fast & Avoid, no spatial awareness or relational reasoning \\
+    CNN & Exploits local spatial patterns; fast enough & OK but translation equivariance may be wrong for the non-uniform band map \\
+    NNUE & Fast incremental updates, dual-perspective design, ClippedReLU $[0,1]$ activation & Doesn't fit this problem size, but dual-perspective design, ClippedReLU, king-relative features, and direct output shortcuts are worth borrowing \\
+    ResNet & Good when a baseline evaluation exists & Good, but lacks inherent spatial awareness \\
+    GNN & Movement graph; invariant to symmetries & Avoid, dynamic graph changes, implementation complexity, and slower performance \\
     \bottomrule
   \end{tabular}
     \caption{Existing model candidates and recommendations.}
@@ -138,6 +138,8 @@ This architecture blends known components into a novel evaluation network:
   \item \textbf{Scalar injection} of escape counts at the trunk boundary
   \item \textbf{Direct output shortcut} for forced-pass signal, bypassing the trunk
 \end{itemize}
+
+\noindent\textbf{Note on the name}: ``Dual-Perspective'' refers to player-perspective symmetry enforced via shared Siamese weights. The architecture deliberately breaks spatial translation equivariance in two places: fixed band-map channels (4--6) encode absolute square identity, and channel 15 recentres around the unicorn.
 
 Core design elements:
 \begin{itemize}
@@ -229,13 +231,13 @@ In addition, \textbf{3 scalars are injected} outside the CNN:
 \end{table}
 
 The escape counts are appended to \texttt{h} after Siamese fusion.
-The forced-pass bit bypasses the trunk entirely as a learned additive weight on the output scalar.
+The forced-pass bit bypasses the trunk entirely via a single learned scalar weight \texttt{w\_pass} added directly to the output before \texttt{tanh}. This is intentional: \texttt{tanh} bounds the sum correctly, and since \texttt{w\_pass} is initialised to zero and trained from data, it learns an appropriate magnitude without requiring additional scaling.
 
 \newpage
 \subsubsection{Shared Spatial Encoder}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{SSE.png}
+  \includegraphics[width=\textwidth,height=0.80\textheight,keepaspectratio]{components/SSE.png}
   \caption{Shared Spatial Encoder used for both player perspectives (shared weights).}
   \label{fig:shared-spatial-encoder}
 \end{figure}
@@ -255,11 +257,11 @@ Figure~\ref{fig:shared-spatial-encoder} details the encoder stack used to extrac
 
 \newpage
 \subsubsection{Residual Trunk}
-There is a trunk of 3 ResBlocks with skip connections. Each ResBlock consists of:
+There is a trunk of 3 ResBlocks with skip connections and dropout regularization. Each ResBlock consists of:
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth,height=0.58\textheight,keepaspectratio]{residual_trunk.png}
+  \includegraphics[width=\textwidth,height=0.58\textheight,keepaspectratio]{components/residual_trunk.png}
   \caption{Residual trunk structure with stacked ResBlocks and skip connections.}
   \label{fig:residual-trunk}
 \end{figure}
@@ -275,11 +277,14 @@ This also provides graceful degradation as, if a block learns to output zero (i.
 
 \textbf{Input dimension}: 258 (256 Siamese CNN output + 2 escape scalars).
 
-\newpage
+The current PyTorch implementation applies \texttt{Dropout(0.2)} after each linear layer in every ResBlock and before the first linear layer in the output head. This regularizes the bootstrapped self-play training setup without changing the inference-time graph structure.
+
+% \newpage
 \textbf{Notes}:
 \begin{itemize}
   \item \textbf{Why residual blocks}: The network learns \emph{corrections} on top of a near-correct base representation. This is the right structure when training via minimax bootstrapping. Skip connections prevent vanishing gradients with depth.
   \item \textbf{Why 3 ResBlocks}: Maps to Escampe's three natural abstraction levels (proximity/unicorn-relative $<$ band interaction/tempo $<$ forced-pass/escape dynamics). Matches empirical optimum from board game literature at this parameter scale (\href{https://en.wikipedia.org/wiki/AlphaZero}{AlphaZero}, \href{https://arxiv.org/pdf/2107.08387}{Train on Small, Play the Large: scaling up board games with AlphaZero and GNN}, \href{https://arxiv.org/html/2409.12272v1#S6}{Mastering Chess with a Transformer Model}). A smaller block count wouldn't capture the full complexity of this game and going to three blocks is worth the additional cost. Also, with ClippedReLU, more than 3 blocks would lead to training instability as the gradient path through the skip connections becomes dominant and the $F(x)$ branch receives progressively weaker gradients. Meaning wise, after 3 levels of composition, further blocks learn redundant representations since the positional complexity is fundamentally bounded by the board size and piece interactions.
+  \item \textbf{Why dropout in ResBlocks}: The model is trained on bootstrapped self-play labels, so dropout helps reduce overfitting without removing the residual signal or changing the inference-time architecture.
   \item \textbf{Why ClippedReLU in ResBlocks}: Keeps activations bounded at every depth, preventing value explosion through skip connections.
   \item \textbf{Scalar injection at trunk input}: Escape counts are global signals that do not have a natural spatial representation. Injecting them at \texttt{h} (after the CNN, before the trunk) lets the ResBlocks learn to combine spatial features with game-state scalars. The trunk's Linear($258\to258$) layer learns the projection automatically.
 \end{itemize}
@@ -290,13 +295,13 @@ The output head uses a direct bypass for forced pass signals, inspired by \href{
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth,height=0.34\textheight,keepaspectratio]{output_head.png}
+  \includegraphics[width=\textwidth,height=0.34\textheight,keepaspectratio]{components/output_head.png}
   \caption{Output head producing a bounded scalar evaluation.}
   \label{fig:output-head}
 \end{figure}
 \FloatBarrier
 
-\texttt{w\_pass} is a single learned scalar parameter. Wiring the forced pass signal directly to the output bypasses the trunk entirely, giving this near-linear signal maximum gradient and preventing the trunk from having to learn to route it.
+\texttt{w\_pass} is a single learned scalar parameter. Wiring the forced pass signal directly to the output bypasses the trunk entirely, giving this near-linear signal maximum gradient and preventing the trunk from having to learn to route it. The output head also uses dropout before its first linear layer, matching the regularization used in the trunk.
 
 This mirrors Stockfish HalfKAv2's \texttt{FullThreats} feature set, which is passed directly to the output layer for a similar reason - some signals have a nearly linear effect on evaluation, and the hidden layers add noise rather than value.
 
@@ -306,15 +311,17 @@ No ClippedReLU on the output since Tanh already bounds the final value. The outp
 \section{Training}
 
 \subsection{Data Generation (Minimax Bootstrapping)}
-We use the \textbf{existing alpha-beta engine} at depth 4--6 to label positions with ``ground truth'' scores.
-The network learns to approximate deep search evaluations.
-Precisely, for each position sampled from self-play games, we run a minimax search to get the score and use it as the training label: \texttt{score\_label = minimax(board, depth=5) / MATE\_SCORE} (normalized to $[-1,1]$).
-This is a form of supervised learning where the target labels are generated by a stronger search algorithm.
-We aim at around 50K--100K labeled positions, which is sufficient for the network to learn meaningful patterns without overfitting.
+The existing alpha-beta engine is used at depth 5--7 to label positions with ground-truth scores. The network learns to approximate these deep search evaluations. Terminal positions (unicorn captured) are labelled exactly 1.0. All other positions are normalised as \texttt{score\_label = minimax(board, depth=5) / MATE\_SCORE}, where \texttt{MATE\_SCORE} is the score returned by the engine for an immediate win (a large constant, e.g. \texttt{100\_000}). This normalises scores to $[-1, 1]$.
 
-\textbf{Note on the band constraint and forced pass signals}: Both require knowing the last move's landing band, not just the board position. Ensure training examples store \texttt{(board\_state, last\_landing\_band, label)} triples, not just \texttt{(board\_state, label)}. Forced-pass positions are rare ($\sim$2--5\% of positions); the direct shortcut ensures they receive strong gradient despite low frequency.
+The data generation procedure:
+\begin{enumerate}
+  \item Reset the board to a random legal opening configuration.
+  \item Play a mixed game: each ply either selects a random legal move (probability 0.7) or the engine's best move at depth 2 (probability 0.3), to generate diverse positions.
+  \item At each ply after the 4th, label the current position with probability 0.3 using the depth-5 engine.
+  \item Continue until the game ends or 100 plies are reached.
+\end{enumerate}
 
-Alternatively, we could use \textbf{TD-learning} but minimax bootstrapping is more straightforward and effective for our purposes.
+Approximately \textbf{50K--100K labeled positions} are sufficient for the network to learn meaningful patterns without overfitting. Training examples store \texttt{(board\_state, last\_landing\_band, label)} triples, not just \texttt{(board\_state, label)}, because both the departure constraint mask and the forced-pass signal require the last landing band. Forced-pass positions are rare ($\sim$2--5\% of positions); the direct shortcut ensures they receive strong gradient despite low frequency. Iterative re-bootstrap rounds at depth 6--8 using the trained network as evaluation function can further improve label quality.
 
 \subsection{Loss Function}
 We use \textbf{Mean Squared Error} (MSE) loss between the network's predicted score and the minimax score label:
@@ -324,10 +331,10 @@ loss = F.mse_loss(prediction, target)
 \end{lstlisting}
 
 \subsection{Optimizer and Training Hyperparameters}
-We use \textbf{AdamW} (\texttt{lr=1e-3}, \texttt{weight\_decay=1e-4}) with \textbf{Cosine Annealing with Warm Restarts} to escape plateaus during iterative bootstrapping rounds. We also apply \textbf{gradient clipping} (\texttt{clip\_grad\_norm\_=1.0}) to prevent exploding gradients.
+We use \textbf{AdamW} (\texttt{lr=1e-3}, \texttt{weight\_decay=1e-4}) with \textbf{CosineAnnealingWarmRestarts} to escape plateaus during iterative bootstrapping rounds. We also apply \textbf{gradient clipping} (\texttt{clip\_grad\_norm\_=1.0}) to prevent exploding gradients.
 
 \subsection{Training Hardware}
-We used a GTX 1080 GPU for training, which is more than sufficient for this model size and dataset.
+Training was performed on the free Google Colab Tier (4h T4 GPU), which is sufficient for this model size and dataset.
 
 \begin{lstlisting}[language=bash]
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
@@ -336,35 +343,33 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 \newpage
 \subsection{Export Pipeline}
 \begin{lstlisting}[language=Python]
-# 1. Fold BatchNorm into conv/linear weights (eliminates BN at inference)
-def fold_batchnorm(w, b, bn_mean, bn_var, bn_gamma, bn_beta, eps=1e-5):
-  std = (bn_var + eps).sqrt()
-  return w * (bn_gamma/std).view(-1,1,1,1), \
-      bn_gamma*(b-bn_mean)/std + bn_beta
+# 1. Fold BatchNorm into conv/linear weights
+def fold_batchnorm_conv(conv, bn):
+  std = (bn.running_var + bn.eps).sqrt()
+  /* Lines 216-218 omitted */
+  return w_new, b_new
 
-model = fold_all_batchnorms(model)
-
-# 2. Export all weights to JSON (include w_pass and new band masks)
-weights = {k: v.tolist() for k,v in model.state_dict().items()}
-weights["band1_mask"] = BAND1_MASK.tolist()
-weights["band2_mask"] = BAND2_MASK.tolist()
-weights["band3_mask"] = BAND3_MASK.tolist()
-weights["w_forced_pass"] = model.w_forced_pass.item()  # w_pass weight
-json.dump(weights, open("escampe_net_weights.json","w"))
+# 2. Export all weights to JSON
+weights = {k: v.tolist() for k, v in model.state_dict().items()}
+weights["band1_mask"] = BAND_MASK[1]
+weights["band2_mask"] = BAND_MASK[2]
+weights["band3_mask"] = BAND_MASK[3]
+weights["w_forced_pass"] = model.w_forced_pass.item()
+json.dump(weights, open("escampe_net_weights.json", "w"))
 
 # 3. Save .pth for resuming training
 torch.save(model.state_dict(), "escampe_net.pth")
 
 # 4. Push to HuggingFace
 api.upload_file("escampe_net.pth",
-                path_in_repo="escampe_net.pth",
-                repo_id="mathieu-waharte/escampe-eval")
+        path_in_repo="escampe_net.pth",
+        repo_id="mathieu-waharte/escampe-eval")
 \end{lstlisting}
 
 \clearpage
 \section{Inference}
 
-We load the weights once at startup, then run forward pass manually:
+Weights are loaded once at startup; the forward pass is then executed manually in Java with pre-allocated buffers to eliminate GC pressure in the hot path:
 
 \begin{lstlisting}[language=Java]
 // Pre-allocate all activation buffers (no GC pressure in hot path)
@@ -408,8 +413,8 @@ public float evaluate(EscampeBoard board, int lastLandingBand) {
 \section{Optimizations}
 
 \subsection{Masks, maps and channels}
-Band masks, departure masks, band-landing maps, row/column occupancy maps, unicorn-relative attacker maps, escape scalars, and the forced-pass direct shortcut are the strongest low-cost inductive bias improvements for our setting. They provide the network with explicit information about the board's spatial structure, piece interactions, and game-specific mechanics that are critical for learning effective evaluations.
-We are currently using the following inputs:
+Band masks, departure masks, band-landing maps, row/column occupancy maps, unicorn-relative attacker maps, escape scalars, and the forced-pass direct shortcut provide the strongest low-cost inductive bias improvements for this setting. They give the network explicit information about the board's spatial structure, piece interactions, and game-specific mechanics that are critical for effective learning.
+Currently active inputs:
 \begin{itemize}
   \item Row/column occupancy maps (channels 11--14)
   \item Band-landing maps (channels 8--10)
@@ -431,7 +436,7 @@ Squeeze-and-Excitation blocks can be added after convolutional layers to allow t
 Replacing standard convolutions in the encoder with depthwise separable convolutions can reduce parameters and computational cost while maintaining performance.
 
 \subsection{Policy head for move ordering}
-We propose adding a \textbf{policy head} that outputs a probability distribution over the $\sim$96 possible moves (up from $\sim$60 under straight-line movement, due to broken-path movement reaching more destinations per band: 4/8/16 unique destinations for band 1/2/3 respectively from interior squares). Used purely for move ordering in alpha-beta search.
+We propose adding a \textbf{policy head} that outputs a probability distribution over the $\sim$96 possible moves (due to broken-path movement reaching 4/8/16 unique destinations for band 1/2/3 respectively from interior squares). This head is used purely for move ordering in alpha-beta search.
 
 \begin{lstlisting}[language=Python]
 policy_head = nn.Sequential(
@@ -444,9 +449,9 @@ policy_head = nn.Sequential(
 
 Then for each node in the search tree:
 \begin{enumerate}
-  \item Generate legal moves (existing move generator, very fast)
-  \item Call the policy head to get move probabilities and sort moves once per node (slower but improves pruning)
-  \item Run alpha-beta with well-ordered moves for better pruning
+  \item Generate legal moves using the existing move generator (very fast)
+  \item Call the policy head to obtain move probabilities; sort moves by descending probability.
+  \item Run alpha-beta with well-ordered moves for stronger pruning
   \item Use handcrafted eval at leaf nodes \textbf{/!\textbackslash} unless network inference is fast enough
 \end{enumerate}
 
@@ -459,11 +464,11 @@ Then for each node in the search tree:
     \toprule
     Layer & Params & Quantize? & Why \\
     \midrule
-    Conv layers (encoder) & $\sim$33K & INT8 & Weights are small, well-distributed \\
-    Linear proj ($2688\to32$) & $\sim$86K & INT8 & Biggest layer, most to gain \\
-    ResBlock linears & $\sim$8K & INT8 & Clean after ClippedReLU \\
-    Output Linear($64\to1$) & 65 & keep float32 & Tiny, output precision matters \\
-    \texttt{w\_forced\_pass} & 1 & keep float32 & Single scalar, precision matters \\
+    Conv layers (encoder) & $\sim$33K & INT8 & Weights well-distributed; ClippedReLU bounds activations \\
+    Linear proj ($1152\to128$) & $\sim$148K & INT8 & Largest layer; most to gain \\
+    ResBlock linears & $\sim$402K & INT8 & Clean bounded range after ClippedReLU \\
+    Output Linear($64\to1$) & 65 & keep float32 & Tiny; output precision matters \\
+    \texttt{w\_forced\_pass} & 1 & keep float32 & Single scalar; precision matters \\
     Band mask channels & fixed & N/A & Already binary (0/1) \\
     \bottomrule
   \end{tabular}
@@ -486,7 +491,7 @@ And in Java with ONNX Runtime:
 // pom.xml: com.microsoft.onnxruntime:onnxruntime:1.17.0
 OrtEnvironment env = OrtEnvironment.getEnvironment();
 OrtSession session = env.createSession("escampe_net_q8.onnx");
-// ~1-2us inference for 25K param INT8 model via ONNX Runtime
+// Target: ~2--5\,\textmu s inference per position on modern hardware (to be benchmarked)
 \end{lstlisting}
 
 To evaluate the quantization performance, we propose to compare the score predictions of the quantized model against the original float32 model on a large set of random board positions. We then compute the mean absolute error (MAE) and mean squared error (MSE) between the two sets of predictions with 95, 99, 99.99 confidence intervals (to check if edge cases don't get degraded). Additionally, we can run a small tournament of 1000 self-play games using both models as evaluation functions in the search, and compare their win rates to see if the quantization has a significant impact on playing strength.
