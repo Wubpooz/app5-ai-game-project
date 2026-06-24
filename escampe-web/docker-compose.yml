@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  escampe-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: escampe-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/prisma/dev.db
+      - BETTER_AUTH_SECRET=please-replace-this-secret-in-production-with-32chars
+      - BETTER_AUTH_URL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    volumes:
+      - sqlite-data:/app/prisma
+
+volumes:
+  sqlite-data:
