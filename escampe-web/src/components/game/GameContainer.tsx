@@ -84,10 +84,8 @@ export const GameContainer: React.FC<GameContainerProps> = ({ onNewGame }) => {
     >
       {/* Game Status Banner */}
       <div
-        className="glass"
+        className="glass game-status-banner"
         style={{
-          width: '100%',
-          maxWidth: '890px',
           padding: '0.6rem 1.5rem',
           display: 'flex',
           justifyContent: 'space-between',
@@ -124,24 +122,26 @@ export const GameContainer: React.FC<GameContainerProps> = ({ onNewGame }) => {
           }}
         >
           {/* Opponent Card for Mobile (stacked) */}
-          <div className="mobile-only-player-card w-full" style={{ display: 'none' }}>
+          <div className="mobile-only-player-card">
             <PlayerCard {...topPlayer} />
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', width: '100%', justifyContent: 'center' }}>
+          <div className="board-row-container" style={{ display: 'flex', gap: '12px', width: '100%', justifyContent: 'center', alignItems: 'stretch' }}>
             {/* Eval Bar */}
             {gameState.phase === 'playing' && (
-              <div style={{ height: 'min(90vw, 560px)' }}>
+              <div style={{ flexShrink: 0 }}>
                 <EvalBar />
               </div>
             )}
             
             {/* Board */}
-            <Board />
+            <div style={{ flexGrow: 1, minWidth: 0, maxWidth: '560px', width: '100%' }}>
+              <Board />
+            </div>
           </div>
 
           {/* Self Card for Mobile (stacked) */}
-          <div className="mobile-only-player-card w-full" style={{ display: 'none' }}>
+          <div className="mobile-only-player-card">
             <PlayerCard {...bottomPlayer} />
           </div>
         </div>
@@ -179,28 +179,50 @@ export const GameContainer: React.FC<GameContainerProps> = ({ onNewGame }) => {
 
       {/* CSS adjustments for desktop layout grid and media queries */}
       <style jsx global>{`
+        .game-status-banner {
+          width: 100%;
+          max-width: 890px;
+          margin: 0 auto;
+        }
+        .board-row-container {
+          width: 100%;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .mobile-only-player-card {
+          display: none;
+        }
+        .desktop-only-player-card {
+          display: block;
+        }
         @media (min-width: 820px) {
           .desktop-layout {
             grid-template-columns: 1fr 300px !important;
-          }
-          .desktop-only-player-card {
-            display: block !important;
-          }
-          .mobile-only-player-card {
-            display: none !important;
           }
         }
         @media (max-width: 819px) {
           .desktop-layout {
             grid-template-columns: 1fr !important;
           }
-          .desktop-only-player-card {
-            display: none !important;
-          }
           .mobile-only-player-card {
-            display: block !important;
-            max-width: min(90vw, 560px);
+            display: block;
+            max-width: min(92vw, 560px);
+            width: 100%;
             margin: 0 auto;
+          }
+          .desktop-only-player-card {
+            display: none;
+          }
+          .game-status-banner {
+            max-width: min(92vw, 560px);
+          }
+          .board-row-container {
+            max-width: min(92vw, 560px);
+          }
+          .game-sidebar {
+            max-width: min(92vw, 560px);
+            margin: 0 auto;
+            width: 100%;
           }
         }
       `}</style>

@@ -3,7 +3,7 @@ import { useSettingsStore } from '../../stores/settings-store';
 
 interface PieceProps {
   type: 'B' | 'b' | 'N' | 'n'; // B/b = White Unicorn/Paladin, N/n = Black Unicorn/Paladin
-  size?: number;
+  size?: number | string;
   isSelected?: boolean;
   isThreatened?: boolean;
   isMovable?: boolean;
@@ -11,7 +11,7 @@ interface PieceProps {
 
 export const Piece: React.FC<PieceProps> = ({
   type,
-  size = 50,
+  size = '80%',
   isSelected = false,
   isThreatened = false,
   isMovable = false,
@@ -75,8 +75,8 @@ export const Piece: React.FC<PieceProps> = ({
   return (
     <div
       style={{
-        width: size,
-        height: size,
+        width: typeof size === 'number' ? `${size}px` : size,
+        height: typeof size === 'number' ? `${size}px` : size,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -222,39 +222,44 @@ export const Board: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4" style={{ width: '100%' }}>
       {/* Placement Toolbar */}
       {gameState.phase === 'placement' && !reviewMode && (
-        <div className="glass flex items-center justify-between p-4 w-full gap-4 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-accent">Placement:</span>
+        <div className="glass flex items-center justify-between p-4 w-full gap-4 animate-fade-in placement-toolbar">
+          <div className="flex items-center gap-3 placement-group">
+            <span className="text-sm font-semibold text-accent">Setup:</span>
             <button
               onClick={() => setSelectedPlacementType('unicorn')}
               className={`btn ${selectedPlacementType === 'unicorn' ? 'btn-primary' : 'btn-secondary'} text-xs`}
-              style={{ padding: '0.4rem 0.8rem' }}
+              style={{ padding: '0.5rem 1rem' }}
             >
-              Unicorn ({placementUnicorn ? '1/1' : '0/1'})
+              🦄 Unicorn ({placementUnicorn ? '1/1' : '0/1'})
             </button>
             <button
               onClick={() => setSelectedPlacementType('paladin')}
               className={`btn ${selectedPlacementType === 'paladin' ? 'btn-primary' : 'btn-secondary'} text-xs`}
-              style={{ padding: '0.4rem 0.8rem' }}
+              style={{ padding: '0.5rem 1rem' }}
             >
-              Paladins ({placementPaladins.length}/5)
+              🛡️ Paladins ({placementPaladins.length}/5)
             </button>
           </div>
           
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-secondary">
-              Place on your back 2 rows ({gameState.currentSide === 'white' ? 'Rows 1-2' : 'Rows 5-6'})
+          <div className="flex items-center gap-3 placement-actions">
+            <span className="text-xs text-secondary placement-instruction">
+              Place on {gameState.currentSide === 'white' ? 'Rows 1-2' : 'Rows 5-6'}
             </span>
             <button
               disabled={!placementUnicorn || placementPaladins.length !== 5}
               onClick={confirmPlacement}
-              className="btn btn-primary text-xs"
+              className="btn btn-primary confirm-setup-btn"
               style={{
-                padding: '0.4rem 1.2rem',
+                padding: '0.8rem 1.8rem',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
                 opacity: (placementUnicorn && placementPaladins.length === 5) ? 1 : 0.5,
+                transition: 'all var(--transition-base)',
               }}
             >
               Confirm Setup
@@ -265,10 +270,10 @@ export const Board: React.FC = () => {
 
       {/* Main Board Container */}
       <div
-        className="relative overflow-hidden"
+        className="relative overflow-hidden board-container"
         style={{
-          width: 'min(90vw, 560px)',
-          height: 'min(90vw, 560px)',
+          width: '100%',
+          aspectRatio: '1 / 1',
           borderRadius: 'var(--radius-lg)',
           transition: 'all var(--transition-base)',
           ...getBoardBgStyle(),
@@ -278,8 +283,8 @@ export const Board: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateRows: 'repeat(6, 1fr)',
-            gridTemplateColumns: 'repeat(6, 1fr)',
+            gridTemplateRows: 'repeat(6, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
             width: '100%',
             height: '100%',
           }}
@@ -400,7 +405,7 @@ export const Board: React.FC = () => {
                   {pieceType !== '-' && pieceType !== null && (
                     <Piece
                       type={pieceType}
-                      size={60}
+                      size="80%"
                       isSelected={isSelected}
                       isMovable={legalFromSquares.includes(`${row}-${col}`)}
                     />
@@ -447,6 +452,41 @@ export const Board: React.FC = () => {
           )}
         </div>
       </div>
+      <style jsx>{`
+        .placement-toolbar {
+          width: 100% !important;
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+        }
+        @media (max-width: 580px) {
+          .placement-toolbar {
+            flex-direction: column !important;
+            gap: 1.25rem !important;
+            align-items: stretch !important;
+            padding: 1.25rem !important;
+          }
+          .placement-group {
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+          }
+          .placement-actions {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            width: 100%;
+          }
+          .confirm-setup-btn {
+            width: 100%;
+            padding: 0.9rem 2rem !important;
+            font-size: 0.85rem !important;
+          }
+          .placement-instruction {
+            text-align: center;
+          }
+        }
+      `}</style>
     </div>
   );
 };
