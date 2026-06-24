@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSettingsStore } from '../../stores/settings-store';
 
 interface PieceProps {
   type: 'B' | 'b' | 'N' | 'n'; // B/b = White Unicorn/Paladin, N/n = Black Unicorn/Paladin
@@ -18,16 +19,58 @@ export const Piece: React.FC<PieceProps> = ({
   const isUnicorn = type === 'B' || type === 'N';
   const isWhite = type === 'B' || type === 'b';
   
-  // Custom theme colors for pieces
+  const pieceTheme = useSettingsStore((state) => state.pieceTheme);
+
+  const isNeon = pieceTheme === 'neon';
+  const isMinimalist = pieceTheme === 'minimalist';
+
+  const gradId = `grad-${type}`;
+
+  const neonGlowColor = isThreatened 
+    ? '#ff3333' 
+    : isWhite 
+    ? '#ffd700' 
+    : '#00ffff';
+
   const strokeColor = isSelected 
     ? 'var(--accent-bright)' 
     : isThreatened 
     ? 'var(--quality-blunder)' 
-    : isWhite 
-    ? '#4e3b1c' 
-    : '#f8f9fa';
+    : isNeon 
+      ? neonGlowColor
+      : isMinimalist
+        ? (isWhite ? '#8a6a2e' : '#4e5569')
+        : (isWhite ? '#4e3b1c' : '#f8f9fa');
 
-  const gradId = `grad-${type}`;
+  let fillColor = `url(#${gradId})`;
+  let hornFill = 'url(#grad-gold)';
+  let hornStroke = 'var(--accent)';
+  let eyeColor = isWhite ? 'var(--accent-dim)' : 'var(--accent)';
+  let crownStroke = 'var(--accent)';
+  let crossStroke = 'var(--accent)';
+  let visorStroke = isWhite ? '#6e5631' : 'var(--text-secondary)';
+  let shadowFilter = isSelected 
+    ? 'drop-shadow(0 0 8px var(--accent))' 
+    : '';
+
+  if (isNeon) {
+    fillColor = '#090a0f';
+    hornFill = 'none';
+    hornStroke = strokeColor;
+    eyeColor = strokeColor;
+    crownStroke = strokeColor;
+    crossStroke = strokeColor;
+    visorStroke = strokeColor;
+    shadowFilter = `drop-shadow(0 0 5px ${neonGlowColor})`;
+  } else if (isMinimalist) {
+    fillColor = isWhite ? '#fcfaf2' : '#1e2230';
+    hornFill = isWhite ? '#d4a853' : '#5b6380';
+    hornStroke = strokeColor;
+    eyeColor = strokeColor;
+    crownStroke = 'none'; // hide crown neck details
+    crossStroke = isWhite ? '#d4a853' : '#5b6380';
+    visorStroke = 'none'; // hide helmet visor lines
+  }
 
   return (
     <div
@@ -52,7 +95,7 @@ export const Piece: React.FC<PieceProps> = ({
         viewBox="0 0 100 100"
         width="90%"
         height="90%"
-        style={{ overflow: 'visible' }}
+        style={{ overflow: 'visible', filter: shadowFilter }}
       >
         <defs>
           {/* Gold gradient for Unicorn horn */}
@@ -82,19 +125,19 @@ export const Piece: React.FC<PieceProps> = ({
             {/* Horn */}
             <path
               d="M 50 15 L 56 35 L 48 37 Z"
-              fill="url(#grad-gold)"
-              stroke="var(--accent)"
+              fill={hornFill}
+              stroke={hornStroke}
               strokeWidth="2.5"
               strokeLinejoin="round"
               style={{
-                filter: 'drop-shadow(0 0 4px var(--accent-bright))',
+                filter: isNeon ? `drop-shadow(0 0 4px ${strokeColor})` : 'drop-shadow(0 0 4px var(--accent-bright))',
                 transformOrigin: '50px 35px',
               }}
             />
             {/* Mane & Head */}
             <path
               d="M 28 85 C 28 65, 34 50, 42 40 C 46 35, 54 32, 58 35 C 64 39, 66 48, 62 54 C 58 60, 50 63, 50 68 C 50 75, 56 82, 58 85 Z"
-              fill={`url(#${gradId})`}
+              fill={fillColor}
               stroke={strokeColor}
               strokeWidth="3.5"
               strokeLinejoin="round"
@@ -104,17 +147,19 @@ export const Piece: React.FC<PieceProps> = ({
               cx="54"
               cy="46"
               r="3.5"
-              fill={isWhite ? 'var(--accent-dim)' : 'var(--accent)'}
+              fill={eyeColor}
             />
             {/* Golden Crown Base around neck */}
-            <path
-              d="M 40 55 L 46 51 L 50 56 L 54 50 L 58 55"
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            {crownStroke !== 'none' && (
+              <path
+                d="M 40 55 L 46 51 L 50 56 L 54 50 L 58 55"
+                fill="none"
+                stroke={crownStroke}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
           </g>
         ) : (
           /* Stylized Paladin SVG */
@@ -122,24 +167,26 @@ export const Piece: React.FC<PieceProps> = ({
             {/* Shield / Outer Crest */}
             <path
               d="M 25 32 C 25 32, 25 75, 50 88 C 75 75, 75 32, 75 32 L 50 22 Z"
-              fill={`url(#${gradId})`}
+              fill={fillColor}
               stroke={strokeColor}
               strokeWidth="3.5"
               strokeLinejoin="round"
             />
             {/* Helmet Visor Slit */}
-            <path
-              d="M 38 42 H 62 M 38 48 H 62 M 50 42 V 58"
-              fill="none"
-              stroke={isWhite ? '#6e5631' : 'var(--text-secondary)'}
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            {visorStroke !== 'none' && (
+              <path
+                d="M 38 42 H 62 M 38 48 H 62 M 50 42 V 58"
+                fill="none"
+                stroke={visorStroke}
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            )}
             {/* Cross on the shield */}
             <path
               d="M 50 30 V 70 M 35 52 H 65"
               fill="none"
-              stroke="var(--accent)"
+              stroke={crossStroke}
               strokeWidth="2.5"
               strokeLinecap="round"
               style={{ opacity: 0.85 }}

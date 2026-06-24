@@ -8,6 +8,7 @@ import { BotSelector } from '../components/lobby/BotSelector';
 import { TimeControlPicker } from '../components/lobby/TimeControlPicker';
 import { Piece } from '../components/board/Piece';
 import type { Side } from '../engine/types';
+import { SettingsModal } from '../components/ui/SettingsModal';
 
 export default function Home() {
   // Game states
@@ -15,6 +16,9 @@ export default function Home() {
   const gameMode = useGameStore((state) => state.gameMode);
   const reviewMode = useGameStore((state) => state.reviewMode);
   const initGame = useGameStore((state) => state.initGame);
+
+  // Settings modal visibility state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Local lobby settings
   const [activeTab, setActiveTab] = useState<GameMode>('vs-bot');
@@ -61,10 +65,18 @@ export default function Home() {
           <div className="site-logo">
             ESCAMPE<span>.AI</span>
           </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="btn btn-secondary text-xs flex items-center gap-2"
+            style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+          >
+            ⚙️ Settings
+          </button>
         </header>
         <main>
           <ReviewContainer />
         </main>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       </div>
     );
   }
@@ -77,10 +89,18 @@ export default function Home() {
           <div className="site-logo">
             ESCAMPE<span>.AI</span>
           </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="btn btn-secondary text-xs flex items-center gap-2"
+            style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+          >
+            ⚙️ Settings
+          </button>
         </header>
         <main>
           <GameContainer onNewGame={handleNewGameClick} />
         </main>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       </div>
     );
   }
@@ -94,16 +114,25 @@ export default function Home() {
           ESCAMPE<span>.AI</span>
         </div>
         
-        <div className="nav-links">
-          <a href="#" className="nav-link active">Lobby Play</a>
-          <a
-            href="https://github.com/m-c-c/escampe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
+        <div className="flex items-center gap-4">
+          <div className="nav-links" style={{ margin: 0 }}>
+            <a href="#" className="nav-link active">Lobby Play</a>
+            <a
+              href="https://github.com/m-c-c/escampe"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link"
+            >
+              GitHub rules
+            </a>
+          </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="btn btn-secondary text-xs flex items-center gap-2"
+            style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
           >
-            GitHub rules
-          </a>
+            ⚙️ Settings
+          </button>
         </div>
       </header>
 
