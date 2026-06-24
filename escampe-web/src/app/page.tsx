@@ -13,9 +13,15 @@ import { SettingsModal } from '../components/ui/SettingsModal';
 export default function Home() {
   // Game states
   const gameState = useGameStore((state) => state.gameState);
-  const gameMode = useGameStore((state) => state.gameMode);
+  const gameActive = useGameStore((state) => state.gameActive);
   const reviewMode = useGameStore((state) => state.reviewMode);
   const initGame = useGameStore((state) => state.initGame);
+
+  // Hydration safety mount check
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Settings modal visibility state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -28,12 +34,19 @@ export default function Home() {
   const [timeControl, setTimeControl] = useState<{ limitSecs: number; incrementSecs: number } | null>(null);
 
   // Check if a game is currently active
-  const isGameActive = gameState.moveHistory.length > 0 || gameState.phase === 'playing';
+  const isGameActive = gameActive;
 
   const handleStartGame = () => {
+    console.log('[LOBBY] Start Game clicked. Configuration:', {
+      mode: activeTab,
+      botLevelWhite: activeTab === 'bot-vs-bot' ? botLevelWhite : botLevelBlack,
+      botLevelBlack,
+      playerColor,
+      timeControl,
+    });
     initGame({
       mode: activeTab,
-      botLevelWhite: activeTab === 'bot-vs-bot' ? botLevelWhite : botLevelBlack, // if vs-bot, bot level is botLevelBlack (for black side) or botLevelWhite (for white side)
+      botLevelWhite: activeTab === 'bot-vs-bot' ? botLevelWhite : botLevelBlack,
       botLevelBlack,
       playerColor,
       timeControl,
@@ -41,37 +54,62 @@ export default function Home() {
   };
 
   const handleNewGameClick = () => {
-    useGameStore.setState({
-      gameState: {
-        board: Array.from({ length: 6 }, () => Array(6).fill('-')),
-        phase: 'placement',
-        currentSide: 'white',
-        requiredBand: null,
-        moveHistory: [],
-        whitePlaced: false,
-        blackPlaced: false,
-        winner: null,
-        moveCount: 0,
-        hash: 0n,
-      },
+    console.log('[GAME] Rematch button clicked. Restarting game settings.');
+    const store = useGameStore.getState();
+    store.initGame({
+      mode: store.gameMode,
+      botLevelWhite: store.botLevelWhite,
+      botLevelBlack: store.botLevelBlack,
+      playerColor: store.playerColor,
+      timeControl: store.timeControl,
     });
   };
+
+  const exitToLobby = () => {
+    console.log('[HEADER] Exit to Lobby clicked. Resetting active game state.');
+    useGameStore.setState({ gameActive: false, reviewMode: false });
+  };
+
+  const handleOpenSettings = () => {
+    console.log('[HEADER] Settings button clicked. Opening settings panel modal.');
+    setIsSettingsOpen(true);
+  };
+
+  // Prevent hydration event listener mismatches on load
+  if (!mounted) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0f1117' }}>
+        <div style={{ color: 'var(--accent)', fontWeight: 800, fontSize: '1.5rem', opacity: 0.8, letterSpacing: '0.1em' }}>
+          ESCAMPE<span style={{ color: 'var(--text-primary)' }}>.AI</span>
+        </div>
+      </div>
+    );
+  }
 
   // Render review container
   if (reviewMode) {
     return (
       <div className="page-container animate-fade-in">
         <header className="flex items-center justify-between" style={{ marginBottom: '2rem' }}>
-          <div className="site-logo">
+          <div className="site-logo" style={{ cursor: 'pointer' }} onClick={exitToLobby}>
             ESCAMPE<span>.AI</span>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="btn btn-secondary text-xs flex items-center gap-2"
-            style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
-          >
-            ⚙️ Settings
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exitToLobby}
+              className="btn btn-secondary text-xs flex items-center gap-2"
+              style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+            >
+              🚪 Lobby
+            </button>
+            <button
+              onClick={handleOpenSettings}
+              className="btn btn-secondary text-xs flex items-center gap-2"
+              style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+            >
+              ⚙️ Settings
+            </button>
+          </div>
         </header>
         <main>
           <ReviewContainer />
@@ -86,16 +124,25 @@ export default function Home() {
     return (
       <div className="page-container animate-fade-in">
         <header className="flex items-center justify-between" style={{ marginBottom: '2rem' }}>
-          <div className="site-logo">
+          <div className="site-logo" style={{ cursor: 'pointer' }} onClick={exitToLobby}>
             ESCAMPE<span>.AI</span>
           </div>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="btn btn-secondary text-xs flex items-center gap-2"
-            style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
-          >
-            ⚙️ Settings
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exitToLobby}
+              className="btn btn-secondary text-xs flex items-center gap-2"
+              style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+            >
+              🚪 Exit to Lobby
+            </button>
+            <button
+              onClick={handleOpenSettings}
+              className="btn btn-secondary text-xs flex items-center gap-2"
+              style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
+            >
+              ⚙️ Settings
+            </button>
+          </div>
         </header>
         <main>
           <GameContainer onNewGame={handleNewGameClick} />
@@ -127,7 +174,7 @@ export default function Home() {
             </a>
           </div>
           <button
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={handleOpenSettings}
             className="btn btn-secondary text-xs flex items-center gap-2"
             style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--border-default)' }}
           >
@@ -362,6 +409,7 @@ export default function Home() {
           }
         }
       `}</style>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

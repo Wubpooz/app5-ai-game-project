@@ -22,6 +22,7 @@ export interface MoveRecord {
 interface GameStore {
   // Core game states
   gameState: GameState;
+  gameActive: boolean;
   gameMode: GameMode;
   botLevelWhite: number; // 1-10
   botLevelBlack: number; // 1-10
@@ -107,6 +108,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   return {
     gameState: createInitialGameState(),
+    gameActive: false,
     gameMode: 'pass-and-play',
     botLevelWhite: 5,
     botLevelBlack: 5,
@@ -142,6 +144,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const isFlipped = playerColor === 'black' && config.mode === 'vs-bot';
 
       set({
+        gameActive: true,
         gameState: initial,
         gameMode: config.mode,
         botLevelWhite: config.botLevelWhite ?? 5,

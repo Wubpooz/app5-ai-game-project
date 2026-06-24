@@ -27,7 +27,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
           <h3 className="text-xl font-bold" style={{ color: 'var(--accent)' }}>{title}</h3>
           <button 
             onClick={onClose} 
@@ -44,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             &times;
           </button>
         </div>
-        <div>{children}</div>
+        <div className="modal-scroll-content" style={{ maxHeight: '60vh', overflowY: 'auto', flex: 1, paddingRight: '4px', WebkitOverflowScrolling: 'touch' }}>{children}</div>
       </div>
     </div>
   );

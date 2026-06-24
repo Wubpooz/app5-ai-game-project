@@ -26,13 +26,15 @@ export const Board: React.FC = () => {
 
   // Local placement state
   // White places on rows 0-1 (Row 1-2). Black places on rows 4-5 (Row 5-6).
-  const [placementPieces, setPlacementPieces] = useState<Square[]>([]); // [unicorn, p1, p2, p3, p4, p5]
+  const [placementUnicorn, setPlacementUnicorn] = useState<Square | null>(null);
+  const [placementPaladins, setPlacementPaladins] = useState<Square[]>([]);
   const [selectedPlacementType, setSelectedPlacementType] = useState<'unicorn' | 'paladin'>('unicorn');
 
   // Reset local placement when game state changes phase or resets
   useEffect(() => {
-    if (gameState.phase !== 'placement') {
-      setPlacementPieces([]);
+    if (gameState.phase === 'placement') {
+      setPlacementUnicorn(null);
+      setPlacementPaladins([]);
     }
   }, [gameState.phase, gameState.currentSide]);
 
@@ -71,15 +73,29 @@ export const Board: React.FC = () => {
       return;
     }
 
-    // Normal playing turn click
-    const isLegalTarget = legalMovesForSelected.some(
-      (m) => m.to.row === row && m.to.col === col
-    );
+    const cell = gameState.board[row][col];
+    const isWhitePiece = cell === 'B' || cell === 'b';
+    const isBlackPiece = cell === 'N' || cell === 'n';
+    
+    // Check if the clicked square contains a piece of the current player
+    const isOwnPiece = (gameState.currentSide === 'white' && isWhitePiece) || 
+                       (gameState.currentSide === 'black' && isBlackPiece);
 
-    if (isLegalTarget && selectedSquare) {
-      makePlayerMove(selectedSquare, { row, col });
+    if (selectedSquare) {
+      if (selectedSquare.row === row && selectedSquare.col === col) {
+        // Clicking the selected square deselects it
+        selectSquare(null);
+      } else if (isOwnPiece) {
+        // Clicking another of own pieces selects it instead of moving
+        selectSquare({ row, col });
+      } else {
+        // Clicking an empty square or opponent piece attempts a move
+        makePlayerMove(selectedSquare, { row, col });
+      }
     } else {
-      selectSquare({ row, col });
+      if (isOwnPiece) {
+        selectSquare({ row, col });
+      }
     }
   };
 
@@ -92,45 +108,41 @@ export const Board: React.FC = () => {
 
     if (!isRowAllowed) return;
 
-    // Check if square is already occupied in placement list
-    const existingIndex = placementPieces.findIndex(sq => sq.row === row && sq.col === col);
+    const isUnicornClick = placementUnicorn && placementUnicorn.row === row && placementUnicorn.col === col;
+    const paladinIdx = placementPaladins.findIndex(sq => sq.row === row && sq.col === col);
 
-    if (existingIndex !== -1) {
-      // Remove piece
-      const updated = [...placementPieces];
-      updated.splice(existingIndex, 1);
-      setPlacementPieces(updated);
-      return;
-    }
-
-    // If placing a new piece
-    if (placementPieces.length >= 6) return;
-
-    // Ensure we don't have multiple unicorns
     if (selectedPlacementType === 'unicorn') {
-      // If we already have a unicorn (index 0), replace it or move it
-      const updated = [...placementPieces];
-      if (updated.length > 0) {
-        updated[0] = { row, col };
+      if (isUnicornClick) {
+        setPlacementUnicorn(null);
       } else {
-        updated.push({ row, col });
+        setPlacementUnicorn({ row, col });
+        if (paladinIdx !== -1) {
+          const updated = [...placementPaladins];
+          updated.splice(paladinIdx, 1);
+          setPlacementPaladins(updated);
+        }
+        setSelectedPlacementType('paladin'); // switch to paladin for convenience
       }
-      setPlacementPieces(updated);
-      setSelectedPlacementType('paladin'); // switch to paladin for convenience
     } else {
-      // Add paladin
-      // If index 0 is not yet unicorn, push to end. We'll make sure index 0 is unicorn later.
-      setPlacementPieces([...placementPieces, { row, col }]);
+      // Placing paladin
+      if (paladinIdx !== -1) {
+        const updated = [...placementPaladins];
+        updated.splice(paladinIdx, 1);
+        setPlacementPaladins(updated);
+      } else {
+        if (isUnicornClick) {
+          setPlacementUnicorn(null);
+        }
+        if (placementPaladins.length < 5) {
+          setPlacementPaladins([...placementPaladins, { row, col }]);
+        }
+      }
     }
   };
 
   const confirmPlacement = () => {
-    if (placementPieces.length !== 6) return;
-    
-    // Ensure unicorn is first. If the user placed unicorn first, it is index 0.
-    // If not, we might need to swap or let the user know.
-    // In our system, index 0 is the Unicorn. Let's make sure it is correct.
-    handlePlacement(placementPieces);
+    if (!placementUnicorn || placementPaladins.length !== 5) return;
+    handlePlacement([placementUnicorn, ...placementPaladins]);
   };
 
   // Helper to check if a square is highlighted as legal target
@@ -151,13 +163,15 @@ export const Board: React.FC = () => {
 
   // Helper to get placement cell rendering info
   const getPlacementPieceType = (row: number, col: number): 'B' | 'b' | 'N' | 'n' | null => {
-    const idx = placementPieces.findIndex(sq => sq.row === row && sq.col === col);
-    if (idx === -1) return null;
     const side = gameState.currentSide;
-    if (idx === 0) {
+    if (placementUnicorn && placementUnicorn.row === row && placementUnicorn.col === col) {
       return side === 'white' ? 'B' : 'N';
     }
-    return side === 'white' ? 'b' : 'n';
+    const idx = placementPaladins.findIndex(sq => sq.row === row && sq.col === col);
+    if (idx !== -1) {
+      return side === 'white' ? 'b' : 'n';
+    }
+    return null;
   };
 
   // Board background styles based on theme
@@ -219,14 +233,14 @@ export const Board: React.FC = () => {
               className={`btn ${selectedPlacementType === 'unicorn' ? 'btn-primary' : 'btn-secondary'} text-xs`}
               style={{ padding: '0.4rem 0.8rem' }}
             >
-              Unicorn ({placementPieces.length > 0 ? '1/1' : '0/1'})
+              Unicorn ({placementUnicorn ? '1/1' : '0/1'})
             </button>
             <button
               onClick={() => setSelectedPlacementType('paladin')}
               className={`btn ${selectedPlacementType === 'paladin' ? 'btn-primary' : 'btn-secondary'} text-xs`}
               style={{ padding: '0.4rem 0.8rem' }}
             >
-              Paladins ({Math.max(0, placementPieces.length - 1)}/5)
+              Paladins ({placementPaladins.length}/5)
             </button>
           </div>
           
@@ -235,10 +249,13 @@ export const Board: React.FC = () => {
               Place on your back 2 rows ({gameState.currentSide === 'white' ? 'Rows 1-2' : 'Rows 5-6'})
             </span>
             <button
-              disabled={placementPieces.length !== 6}
+              disabled={!placementUnicorn || placementPaladins.length !== 5}
               onClick={confirmPlacement}
               className="btn btn-primary text-xs"
-              style={{ padding: '0.4rem 1.2rem', opacity: placementPieces.length === 6 ? 1 : 0.5 }}
+              style={{
+                padding: '0.4rem 1.2rem',
+                opacity: (placementUnicorn && placementPaladins.length === 5) ? 1 : 0.5,
+              }}
             >
               Confirm Setup
             </button>

@@ -39,7 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Customize Experience">
-      <div className="flex flex-col gap-6 py-2 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="flex flex-col gap-6 pt-2 pr-1" style={{ paddingBottom: '1.5rem' }}>
         
         {/* General Toggles */}
         <div>
