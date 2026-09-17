@@ -11,3 +11,4 @@ __pycache__/
 
 **/model/data
 media/
+**/node_modules/**

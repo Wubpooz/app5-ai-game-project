@@ -1,0 +1,22 @@
+{
+  "name": "escampe-standards",
+  "version": "1.0.0",
+  "description": "TypeScript implementation of EPN, ESN, EGN, EEI-UCI and EEI-CECP for the Escampe board game",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "bun run src/server.ts",
+    "build": "bun build src/index.ts --outdir dist --target browser",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "hono": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.20.3"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
